@@ -1,15 +1,40 @@
-// STUB created by Abhishek - Parth replaces this file
 import mongoose from 'mongoose';
 
-const reviewSchema = new mongoose.Schema(
+const { Schema } = mongoose;
+
+const reviewSchema = new Schema(
   {
-    asset: { type: mongoose.Schema.Types.ObjectId, ref: 'Asset', required: true },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    rating: { type: Number, required: true, min: 1, max: 5 },
-    comment: { type: String, maxlength: 1000, default: '' }
+    asset: {
+      type: Schema.Types.ObjectId,
+      ref: 'Asset',
+      required: true,
+      index: true,
+    },
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    rating: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 5,
+      validate: {
+        validator: Number.isInteger,
+        message: 'Rating must be an integer between 1 and 5',
+      },
+    },
+    comment: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 1000,
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 
