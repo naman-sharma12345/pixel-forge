@@ -56,6 +56,14 @@ export default {
           '0%, 100%': { transform: 'scaleY(0.4)' },
           '50%': { transform: 'scaleY(1)' },
         },
+        'pan-slow': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '100% 50%' },
+        },
+        'pulse-ring': {
+          '0%': { transform: 'scale(1)', opacity: '0.6' },
+          '100%': { transform: 'scale(1.6)', opacity: '0' },
+        },
         'pixel-blink': {
           '0%, 49%': { opacity: '1' },
           '50%, 100%': { opacity: '0.15' },
@@ -65,6 +73,10 @@ export default {
         shimmer: 'shimmer 1.6s linear infinite',
         float: 'float 5s ease-in-out infinite',
         'pixel-blink': 'pixel-blink 1.1s steps(1) infinite',
+        equalizer: 'equalizer 0.8s ease-in-out infinite',
+        'pan-slow': 'pan-slow 60s linear infinite alternate',
+        'spin-slow': 'spin 8s linear infinite',
+        'pulse-ring': 'pulse-ring 1.6s cubic-bezier(0.22,1,0.36,1) infinite',
       },
     },
   },

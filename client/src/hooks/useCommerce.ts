@@ -1,10 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/api'
+import { useMemo } from 'react'
+import { toast } from 'react-hot-toast'
+import { api, isApiClientError } from '@/api'
 import { keys } from './keys'
-import type { LibraryParams, OrderListParams } from '@/types/api'
+import { useAuthStore } from '@/stores/auth'
+import { useUiStore } from '@/stores/ui'
+import type { AssetCard, CartView, LibraryParams, OrderListParams } from '@/types/api'
+
+const EMPTY_CART: CartView = { items: [], subtotal: 0, count: 0 }
+
+function cartError(err: unknown, fallback: string) {
+  if (isApiClientError(err)) {
+    if (err.code === 'ALREADY_OWNED') return 'You already own this'
+    return err.message
+  }
+  return fallback
+}
+
+/** Opens the cart drawer briefly after a desktop add-to-cart (stays if hovered). */
+let peekTimer: number | undefined
+
+/** Desktop only: peek the cart drawer for 2 s; it stays open while hovered. */
+function flashCartDrawer() {
+  if (typeof window === 'undefined' || window.innerWidth < 1024) return
+  const ui = useUiStore.getState()
+  if (ui.cartDrawerOpen && !ui.cartDrawerPeek) return // already fully open
+  useUiStore.setState({ cartDrawerOpen: true, cartDrawerPeek: true })
+  window.clearTimeout(peekTimer)
+  peekTimer = window.setTimeout(() => {
+    const s = useUiStore.getState()
+    if (s.cartDrawerPeek && !s.cartDrawerHovered) useUiStore.setState({ cartDrawerOpen: false, cartDrawerPeek: false })
+  }, 2000)
+}
 
 export function useCart() {
-  return useQuery({ queryKey: keys.cart, queryFn: () => api.cart.get(), staleTime: 15_000 })
+  const status = useAuthStore((s) => s.status)
+  return useQuery({ queryKey: keys.cart, queryFn: () => api.cart.get(), staleTime: 15_000, enabled: status === 'authed' })
 }
 
 export function useCartCount() {
@@ -12,11 +43,39 @@ export function useCartCount() {
   return data?.count ?? 0
 }
 
+export interface AddToCartVars {
+  assetId: string
+  /** AssetCard shape for optimistic insertion (optional). */
+  card?: AssetCard
+}
+
 export function useAddToCart() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (assetId: string) => api.cart.add({ assetId }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.cart }),
+    mutationFn: ({ assetId }: AddToCartVars) => api.cart.add({ assetId }),
+    onMutate: async ({ assetId, card }) => {
+      await qc.cancelQueries({ queryKey: keys.cart })
+      const prev = qc.getQueryData<CartView>(keys.cart)
+      if (prev && card && !prev.items.some((i) => i.asset._id === assetId)) {
+        const items = [...prev.items, { asset: card, addedAt: new Date().toISOString() }]
+        qc.setQueryData<CartView>(keys.cart, {
+          items,
+          subtotal: items.reduce((s, i) => s + i.asset.price, 0),
+          count: items.length,
+        })
+      }
+      return { prev }
+    },
+    onSuccess: (data) => {
+      qc.setQueryData(keys.cart, data)
+      flashCartDrawer()
+      toast.success('Added to cart')
+    },
+    onError: (err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(keys.cart, ctx.prev)
+      toast.error(cartError(err, 'Could not add to cart'))
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.cart }),
   })
 }
 
@@ -24,7 +83,25 @@ export function useRemoveFromCart() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (assetId: string) => api.cart.remove(assetId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.cart }),
+    onMutate: async (assetId) => {
+      await qc.cancelQueries({ queryKey: keys.cart })
+      const prev = qc.getQueryData<CartView>(keys.cart)
+      if (prev) {
+        const items = prev.items.filter((i) => i.asset._id !== assetId)
+        qc.setQueryData<CartView>(keys.cart, {
+          items,
+          subtotal: items.reduce((s, i) => s + i.asset.price, 0),
+          count: items.length,
+        })
+      }
+      return { prev }
+    },
+    onSuccess: (data) => qc.setQueryData(keys.cart, data),
+    onError: (err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(keys.cart, ctx.prev)
+      toast.error(cartError(err, 'Could not remove item'))
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.cart }),
   })
 }
 
@@ -32,7 +109,18 @@ export function useClearCart() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => api.cart.clear(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.cart }),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: keys.cart })
+      const prev = qc.getQueryData<CartView>(keys.cart)
+      qc.setQueryData<CartView>(keys.cart, EMPTY_CART)
+      return { prev }
+    },
+    onSuccess: (data) => qc.setQueryData(keys.cart, data),
+    onError: (err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(keys.cart, ctx.prev)
+      toast.error(cartError(err, 'Could not clear cart'))
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.cart }),
   })
 }
 
@@ -80,6 +168,18 @@ export function useClaimAsset() {
   })
 }
 
+/** Set of asset ids the current user owns (first library page, authed only). */
+export function useOwnedAssetIds(): Set<string> {
+  const status = useAuthStore((s) => s.status)
+  const { data } = useQuery({
+    queryKey: [...keys.library.all, 'owned-ids'],
+    queryFn: () => api.library.list({ limit: 48 }),
+    enabled: status === 'authed',
+    staleTime: 30_000,
+  })
+  return useMemo(() => new Set(data?.items.map((i) => i.asset._id) ?? []), [data])
+}
+
 export function useReviews(assetId: string | undefined, page = 1) {
   return useQuery({
     queryKey: keys.reviews.list(assetId ?? '', page),
@@ -93,5 +193,64 @@ export function usePublicUser(username: string | undefined) {
     queryKey: keys.user.byUsername(username ?? ''),
     queryFn: () => api.users.byUsername(username!),
     enabled: !!username,
+  })
+}
+
+// ---------- reviews ----------
+export function useReviewsPage(assetId: string | undefined, page = 1) {
+  return useQuery({
+    queryKey: [...keys.reviews.list(assetId ?? '', 1), 'page', page],
+    queryFn: () => api.reviews.list({ asset: assetId!, page, limit: 5 }),
+    enabled: !!assetId,
+    placeholderData: (prev) => prev,
+  })
+}
+
+export function useCreateReview(assetId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { rating: number; comment?: string }) => api.reviews.create({ assetId, ...body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reviews', assetId] })
+      qc.invalidateQueries({ queryKey: ['assets'] })
+    },
+  })
+}
+
+export function useUpdateReview(assetId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; rating?: number; comment?: string }) => api.reviews.update(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reviews', assetId] })
+      qc.invalidateQueries({ queryKey: ['assets'] })
+    },
+  })
+}
+
+export function useDeleteReview(assetId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.reviews.remove(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reviews', assetId] })
+      qc.invalidateQueries({ queryKey: ['assets'] })
+    },
+  })
+}
+
+// ---------- downloads ----------
+export function useDownloadAsset() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (assetId: string) => {
+      const { downloadAsset } = await import('@/lib/download')
+      return downloadAsset(assetId)
+    },
+    onSuccess: (ok) => {
+      if (!ok) return
+      toast.success('Download started')
+      qc.invalidateQueries({ queryKey: keys.library.all })
+    },
   })
 }

@@ -2,4 +2,4 @@ export { Button, IconButton, PixelButton, type ButtonProps, type IconButtonProps
 export { Input, Textarea, Select, Checkbox, Switch, Slider, RangeSlider, type InputProps, type TextareaProps, type SelectProps, type SliderProps, type RangeSliderProps } from './fields'
 export { Badge, Chip, Card, Avatar, RatingStars, PriceTag, Kbd, Divider, StatCard } from './display'
 export { Skeleton, Spinner, ProgressBar, EmptyState, Pagination } from './feedback'
-export { Modal, Drawer, Tabs, Tooltip, DropdownMenu } from './overlay'
+export { Modal, Drawer, Sheet, Tabs, Tooltip, DropdownMenu } from './overlay'

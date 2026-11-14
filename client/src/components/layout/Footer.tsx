@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useReducedMotion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import { Logo } from './Logo'
@@ -46,7 +47,14 @@ const COLS: { title: string; links: { label: string; to: string }[] }[] = [
 
 export function Footer() {
   const [email, setEmail] = useState('')
-  const fire = useMemo(() => generateCampfire(), [])
+  const frames = useMemo(() => [0, 1, 2, 3].map((f) => generateCampfire(f)), [])
+  const [frame, setFrame] = useState(0)
+  const reduce = useReducedMotion()
+  useEffect(() => {
+    if (reduce) return
+    const id = window.setInterval(() => setFrame((f) => (f + 1) % frames.length), 140)
+    return () => window.clearInterval(id)
+  }, [reduce, frames.length])
 
   const subscribe = (e: FormEvent) => {
     e.preventDefault()
@@ -93,7 +101,7 @@ export function Footer() {
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
           <p className="text-xs text-subtle">© {new Date().getFullYear()} Pixel Forge. A student-built demo — payments are simulated.</p>
           <div className="flex items-center gap-2 text-xs text-subtle">
-            <img src={fire} alt="" className="pixelated h-6 w-6 animate-float" />
+            <img src={frames[frame]} alt="" className="pixelated h-8 w-8" />
             made with pixels &amp; caffeine
           </div>
         </div>

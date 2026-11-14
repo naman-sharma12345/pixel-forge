@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api'
 import { keys } from './keys'
 import type { AssetListParams, MyAssetsParams } from '@/types/api'
@@ -8,6 +8,15 @@ export function useAssetList(params?: AssetListParams) {
     queryKey: keys.assets.list(params),
     queryFn: () => api.assets.list(params),
     placeholderData: (prev) => prev,
+  })
+}
+
+export function useAssetListInfinite(params?: Omit<AssetListParams, 'page'>) {
+  return useInfiniteQuery({
+    queryKey: [...keys.assets.list(params as AssetListParams), 'infinite'],
+    queryFn: ({ pageParam }) => api.assets.list({ ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.meta.hasNext ? last.meta.page + 1 : undefined),
   })
 }
 

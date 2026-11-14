@@ -73,26 +73,54 @@ export function Avatar({ src, name, username, size = 36, className }: { src?: st
 // ---------- RatingStars ----------
 export function RatingStars({ value, onChange, size = 16, className }: { value: number; onChange?: (v: number) => void; size?: number; className?: string }) {
   const [hover, setHover] = useState(0)
-  const interactive = !!onChange
+  const LABELS = ['', 'Poor', 'Meh', 'Good', 'Great', 'Amazing']
+
+  // display only: plain spans with fractional fill, safe inside links and buttons
+  if (!onChange) {
+    return (
+      <span className={cn('inline-flex items-center gap-0.5', className)} role="img" aria-label={`Rated ${value.toFixed(1)} out of 5`}>
+        {[1, 2, 3, 4, 5].map((i) => {
+          const fill = Math.max(0, Math.min(1, value - (i - 1)))
+          return (
+            <span key={i} className="relative inline-flex p-0.5" aria-hidden="true">
+              <Star size={size} className="text-border-strong" />
+              {fill > 0 && (
+                <span className="absolute inset-0.5 overflow-hidden" style={{ width: `calc(${fill * 100}% - ${fill * 4}px)` }}>
+                  <Star size={size} className="fill-warning text-warning" />
+                </span>
+              )}
+            </span>
+          )
+        })}
+      </span>
+    )
+  }
+
+  const shown = hover || value
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); onChange(Math.min(5, (value || 0) + 1)) }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); onChange(Math.max(1, (value || 1) - 1)) }
+  }
   return (
-    <span className={cn('inline-flex items-center gap-0.5', className)} role={interactive ? 'radiogroup' : 'img'} aria-label={`Rating ${value} out of 5`}>
-      {[1, 2, 3, 4, 5].map((i) => {
-        const filled = (hover || value) >= i
-        return (
+    <span className={cn('inline-flex items-center gap-2', className)}>
+      <span role="radiogroup" aria-label="Your rating" className="inline-flex items-center gap-0.5" onKeyDown={onKey} onMouseLeave={() => setHover(0)}>
+        {[1, 2, 3, 4, 5].map((i) => (
           <button
             key={i}
             type="button"
-            disabled={!interactive}
-            onClick={() => onChange?.(i)}
-            onMouseEnter={() => interactive && setHover(i)}
-            onMouseLeave={() => interactive && setHover(0)}
-            className={cn('p-0.5', interactive ? 'cursor-pointer' : 'cursor-default')}
-            aria-label={`${i} star${i > 1 ? 's' : ''}`}
+            role="radio"
+            aria-checked={value === i}
+            tabIndex={value === i || (!value && i === 1) ? 0 : -1}
+            onClick={() => onChange(i)}
+            onMouseEnter={() => setHover(i)}
+            className="cursor-pointer rounded p-0.5 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            aria-label={`${i} star${i > 1 ? 's' : ''}, ${LABELS[i]}`}
           >
-            <Star size={size} className={filled ? 'fill-warning text-warning' : 'text-border-strong'} />
+            <Star size={size} className={cn('transition-colors', shown >= i ? 'fill-warning text-warning' : 'text-border-strong')} />
           </button>
-        )
-      })}
+        ))}
+      </span>
+      {shown > 0 && <span className="text-sm font-medium text-muted">{LABELS[shown]}</span>}
     </span>
   )
 }

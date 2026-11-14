@@ -85,35 +85,60 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   )
 })
 
+const STEP = (n: number) =>
+  `polygon(0 ${n}px, ${n}px ${n}px, ${n}px 0, calc(100% - ${n}px) 0, calc(100% - ${n}px) ${n}px, 100% ${n}px, 100% calc(100% - ${n}px), calc(100% - ${n}px) calc(100% - ${n}px), calc(100% - ${n}px) 100%, ${n}px 100%, ${n}px calc(100% - ${n}px), 0 calc(100% - ${n}px))`
+
+type PixelTone = 'primary' | 'accent' | 'success'
+const PIXEL_TONES: Record<PixelTone, { face: string; shadow: string; text: string }> = {
+  primary: { face: 'bg-primary group-hover:bg-[#9a70ff]', shadow: 'bg-[#4c1d95]', text: 'text-white' },
+  accent: { face: 'bg-accent group-hover:bg-[#5fe3f5]', shadow: 'bg-[#0e5566]', text: 'text-bg' },
+  success: { face: 'bg-success group-hover:bg-[#bef264]', shadow: 'bg-[#3f6212]', text: 'text-bg' },
+}
+
+export interface PixelButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  size?: Size
+  tone?: PixelTone
+  loading?: boolean
+}
+
 /**
- * Signature CTA: stepped pixel corners, hard offset shadow,
- * presses down-right 3px and loses its shadow.
+ * Signature CTA: stepped pixel corners (clip-path), a 3px hard offset shadow
+ * in a darker shade; on press the face moves 3px down-right onto the shadow.
+ * The shadow is its own clipped layer because clip-path would cut a box-shadow.
  */
-export const PixelButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { size?: Size }>(
-  function PixelButton({ size = 'md', className, children, ...rest }, ref) {
-    const pad = size === 'sm' ? 'px-4 py-2 text-xs' : size === 'lg' ? 'px-8 py-4 text-base' : 'px-6 py-3 text-sm'
-    return (
-      <button
-        ref={ref}
+export const PixelButton = forwardRef<HTMLButtonElement, PixelButtonProps>(function PixelButton(
+  { size = 'md', tone = 'primary', loading, className, children, disabled, ...rest },
+  ref,
+) {
+  const t = PIXEL_TONES[tone]
+  const step = size === 'sm' ? 3 : 4
+  const pad = size === 'sm' ? 'h-9 px-4 text-[9px]' : size === 'lg' ? 'h-14 px-7 text-[11px]' : 'h-11 px-5 text-[10px]'
+  return (
+    <button
+      ref={ref}
+      disabled={disabled || loading}
+      className={cn(
+        'group relative inline-flex shrink-0 select-none pb-[3px] pr-[3px] font-pixel uppercase leading-none tracking-wide',
+        'focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50',
+        className,
+      )}
+      {...rest}
+    >
+      <span aria-hidden="true" className={cn('absolute bottom-0 right-0 h-[calc(100%-3px)] w-[calc(100%-3px)]', t.shadow)} style={{ clipPath: STEP(step) }} />
+      <span
         className={cn(
-          'group relative inline-flex items-center justify-center gap-2 font-pixel uppercase tracking-wide text-bg',
-          'bg-gradient-to-r from-primary to-accent bg-[length:200%_100%] bg-left',
-          'transition-all duration-150 hover:bg-right',
-          'shadow-pixel-md hover:shadow-glow',
-          'active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg',
-          'disabled:opacity-50 disabled:pointer-events-none',
+          'relative inline-flex w-full items-center justify-center gap-2.5 whitespace-nowrap transition-[transform,background-color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]',
+          'shadow-[inset_0_2px_0_rgba(255,255,255,0.28),inset_0_-2px_0_rgba(0,0,0,0.18)]',
+          'group-active:translate-x-[3px] group-active:translate-y-[3px] group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-4 group-focus-visible:outline-accent',
+          t.face,
+          t.text,
           pad,
-          className,
         )}
-        style={{
-          clipPath:
-            'polygon(0 8px, 8px 8px, 8px 0, calc(100% - 8px) 0, calc(100% - 8px) 8px, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 8px calc(100% - 8px), 0 calc(100% - 8px))',
-        }}
-        {...rest}
+        style={{ clipPath: STEP(step) }}
       >
+        {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
         {children}
-      </button>
-    )
-  },
-)
+      </span>
+    </button>
+  )
+})

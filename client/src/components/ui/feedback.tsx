@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
-import { generateSpriteThumb } from '@/lib/pixelArt'
+import { generateIllustration, type IllustrationKind } from '@/lib/pixelArt'
 
 export function Skeleton({ className }: { className?: string }) {
   return (
@@ -34,30 +34,50 @@ export function ProgressBar({ value, max = 100, className, label }: { value: num
   )
 }
 
+const KIND_TO_ART: Record<string, IllustrationKind> = {
+  vfx: 'skull',
+  sprites: 'slime',
+  sfx: 'ghost',
+  music: 'star',
+}
+
 export function EmptyState({
   title,
   text,
   action,
+  art,
   seed = 'empty',
-  kind = 'sprites',
+  kind,
   className,
+  compact = false,
 }: {
   title: string
   text?: string
   action?: ReactNode
+  /** Pixel illustration to show. */
+  art?: IllustrationKind
   seed?: string
+  /** Legacy: category key, mapped to an illustration. */
   kind?: string
   className?: string
+  compact?: boolean
 }) {
-  const art = useMemo(() => generateSpriteThumb(seed, kind), [seed, kind])
+  const img = useMemo(() => generateIllustration(art ?? KIND_TO_ART[kind ?? ''] ?? 'ghost', seed), [art, kind, seed])
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-4 rounded-panel border border-dashed border-border-strong bg-surface/50 px-6 py-16 text-center', className)}>
-      <img src={art} alt="" className="pixelated h-24 w-24 opacity-80" />
-      <div className="flex flex-col gap-1">
-        <h3 className="font-display text-lg font-semibold text-text">{title}</h3>
-        {text && <p className="max-w-sm text-sm text-muted">{text}</p>}
+    <div
+      className={cn(
+        'relative flex flex-col items-center justify-center overflow-hidden rounded-panel border border-dashed border-border-strong bg-surface/40 text-center',
+        compact ? 'gap-3 px-6 py-10' : 'gap-5 px-6 py-16 sm:py-20',
+        className,
+      )}
+    >
+      <div className="dot-grid pointer-events-none absolute inset-0 opacity-30 [mask-image:radial-gradient(circle_at_center,black,transparent_65%)]" />
+      <img src={img} alt="" className={cn('pixelated relative animate-float', compact ? 'h-20 w-20' : 'h-28 w-28')} />
+      <div className="relative flex max-w-sm flex-col gap-1.5">
+        <h3 className="font-display text-lg font-semibold text-text sm:text-xl">{title}</h3>
+        {text && <p className="text-sm leading-relaxed text-muted">{text}</p>}
       </div>
-      {action}
+      {action && <div className="relative flex flex-wrap items-center justify-center gap-3">{action}</div>}
     </div>
   )
 }

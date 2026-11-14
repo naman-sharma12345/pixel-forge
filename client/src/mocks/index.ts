@@ -57,7 +57,7 @@ import type {
 import type { Api } from '@/api'
 import { db, earningFor, feeFor, getSessionUserId, rid, saveDb, setSessionUserId, type MockAsset, type MockDb, type MockOrder, type MockPurchase, type MockReview, type MockUser } from './db'
 import { audioPreviewUrl, type AudioKind } from './wav'
-import { generateAvatar, generateSpriteThumb } from '@/lib/pixelArt'
+import { generateAvatar, generateSpriteSheet, generateSpriteThumb } from '@/lib/pixelArt'
 import { CATEGORY_MAP } from '@/lib/constants'
 import type { CreateAssetBody, CreateReviewBody, UpdateReviewBody } from '@/types/api'
 
@@ -122,9 +122,12 @@ function toAdminUser(u: MockUser): AdminUser {
   return { ...cloneUserPublic(u), email: u.email, isBanned: u.isBanned }
 }
 
-function previewUrl(p: MockAsset['previewSeeds'][number]): { url: string; kind: 'image' | 'audio' } {
+function previewUrl(a: MockAsset, p: MockAsset['previewSeeds'][number], index: number): { url: string; kind: 'image' | 'audio' } {
   if (p.kind === 'audio') return { url: audioPreviewUrl((p.audio ?? 'loop') as AudioKind), kind: 'audio' }
-  return { url: generateSpriteThumb(p.seed, 'sprites'), kind: 'image' }
+  // the first image preview of an animated asset is a real sprite sheet with meta.frames cells
+  const frames = typeof a.meta.frames === 'number' ? a.meta.frames : 0
+  if (index === 0 && frames > 1) return { url: generateSpriteSheet(p.seed, frames, a.category), kind: 'image' }
+  return { url: generateSpriteThumb(p.seed, a.category), kind: 'image' }
 }
 
 function thumbUrl(a: MockAsset): string {
@@ -172,7 +175,7 @@ function toDetail(a: MockAsset, viewer: MockUser | null): AssetDetail {
   const card = toCard(a)
   const previews: AssetPreview[] = a.previewUrls?.length
     ? a.previewUrls.map((p) => ({ url: p.url, kind: p.kind }))
-    : a.previewSeeds.map(previewUrl)
+    : a.previewSeeds.map((p, i) => previewUrl(a, p, i))
   return {
     ...card,
     description: a.description,
@@ -497,7 +500,7 @@ export const mockAssets: AssetsApi = {
   async categories() {
     await delay()
     const pub = db.assets.filter((a) => a.status === 'published')
-    return (Object.keys(CATEGORY_MAP) as Category[]).map((key) => ({
+    return ([...CATEGORY_MAP.keys()] as Category[]).map((key) => ({
       key,
       label: CATEGORY_MAP.get(key)!.label,
       count: pub.filter((a) => a.category === key).length,

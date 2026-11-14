@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'react-hot-toast'
 import { api, isApiClientError } from '@/api'
 import { keys } from './keys'
 import { useAuthStore } from '@/stores/auth'
@@ -63,7 +64,7 @@ export function useUpdateMe() {
 export function useUploadAvatar() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (file: File) => api.users.uploadAvatar(file),
+    mutationFn: ({ file, onProgress }: { file: File; onProgress?: (p: number) => void }) => api.users.uploadAvatar(file, onProgress),
     onSuccess: (user) => {
       useAuthStore.getState().setSession(user, useAuthStore.getState().accessToken!)
       qc.setQueryData(keys.auth.me, user)
@@ -99,23 +100,35 @@ export function useWishlist() {
 
 export function useToggleWishlist() {
   const qc = useQueryClient()
-  const user = useAuthStore((s) => s.user)
   return useMutation({
     mutationFn: async ({ assetId, inWishlist }: { assetId: string; inWishlist: boolean }) => {
       if (inWishlist) return api.users.removeWishlist(assetId)
       return api.users.addWishlist(assetId)
     },
+    onMutate: ({ assetId, inWishlist }) => {
+      const prev = useAuthStore.getState().user
+      if (prev) {
+        const wishlist = inWishlist
+          ? prev.wishlist.filter((id) => id !== assetId)
+          : prev.wishlist.includes(assetId) ? prev.wishlist : [...prev.wishlist, assetId]
+        useAuthStore.getState().setSession({ ...prev, wishlist }, useAuthStore.getState().accessToken!)
+      }
+      return { prev }
+    },
     onSuccess: (data) => {
-      if (user) {
-        useAuthStore.getState().setSession({ ...user, wishlist: data.wishlist }, useAuthStore.getState().accessToken!)
+      const current = useAuthStore.getState().user
+      if (current) {
+        useAuthStore.getState().setSession({ ...current, wishlist: data.wishlist }, useAuthStore.getState().accessToken!)
       }
       qc.invalidateQueries({ queryKey: keys.user.wishlist })
       qc.invalidateQueries({ queryKey: ['assets'] })
     },
-    onError: (e) => {
-      if (isApiClientError(e) && e.status === 401) {
-        // handled globally
+    onError: (e, _v, ctx) => {
+      const token = useAuthStore.getState().accessToken
+      if (ctx?.prev && token) {
+        useAuthStore.getState().setSession(ctx.prev, token)
       }
+      if (isApiClientError(e)) toast.error(e.message)
     },
   })
 }

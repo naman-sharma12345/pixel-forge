@@ -88,11 +88,26 @@ textarea:focus-visible {
   background-size: 24px 24px;
 }
 
+.checker {
+  background-image: conic-gradient(#1e1e2c 25%, #161622 0 50%, #1e1e2c 0 75%, #161622 0);
+  background-size: 16px 16px;
+}
+
+.checker-light {
+  background-image: conic-gradient(#d4d4e0 25%, #ededf5 0 50%, #d4d4e0 0 75%, #ededf5 0);
+  background-size: 16px 16px;
+}
+
 .text-gradient {
   background: linear-gradient(120deg, var(--color-primary), var(--color-accent));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+@keyframes pf-sheet {
+  from { background-position-x: 0%; }
+  to { background-position-x: 100%; }
 }
 
 /* range slider thumbs */
@@ -125,4 +140,9 @@ input[type='range'].slider::-moz-range-thumb {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+@keyframes auth-pan {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
 }

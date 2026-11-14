@@ -4,7 +4,7 @@ import type { AssetCard, PublicUserStats, UpdateMeBody, UpdatePasswordBody, User
 export interface UsersApi {
   me(): Promise<UserMe>
   updateMe(body: UpdateMeBody): Promise<UserMe>
-  uploadAvatar(file: File): Promise<UserMe>
+  uploadAvatar(file: File, onProgress?: (percent: number) => void): Promise<UserMe>
   updatePassword(body: UpdatePasswordBody): Promise<null>
   becomeCreator(): Promise<UserMe>
   wishlist(): Promise<AssetCard[]>
@@ -16,10 +16,10 @@ export interface UsersApi {
 export const users: UsersApi = {
   me: () => apiGet('/users/me'),
   updateMe: (body) => apiPatch('/users/me', body),
-  uploadAvatar: (file) => {
+  uploadAvatar: (file, onProgress) => {
     const fd = new FormData()
     fd.append('avatar', file)
-    return apiUpload('/users/me/avatar', fd)
+    return apiUpload('/users/me/avatar', fd, onProgress)
   },
   updatePassword: (body) => apiPatch('/users/me/password', body),
   becomeCreator: () => apiPost('/users/me/become-creator'),

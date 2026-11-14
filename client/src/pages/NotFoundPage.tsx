@@ -5,7 +5,7 @@ import { AnvilMark } from '@/components/layout/Logo'
 
 export default function NotFoundPage() {
   return (
-    <Page title="404 — Pixel Forge" description="Page not found.">
+    <Page title="404" description="Page not found.">
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
         <AnvilMark className="h-16 w-16 opacity-60" />
         <div>
