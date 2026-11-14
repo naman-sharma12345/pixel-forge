@@ -1,0 +1,2133 @@
+openapi: 3.0.3
+info:
+  title: Pixel Forge API
+  version: 1.0.0
+  description: Complete OpenAPI 3.0 specification for the Pixel Forge indie game asset and audio marketplace.
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Service health and readiness
+  - name: Auth
+    description: Authentication, session management and token rotation
+  - name: Users
+    description: User profiles, avatar upload, password management and wishlists
+  - name: Assets
+    description: Asset catalog, discovery, uploads, and detail retrieval
+  - name: Reviews
+    description: Asset ratings and reviews
+  - name: Cart
+    description: Digital cart management
+  - name: Orders
+    description: Order placement and order history
+  - name: Payments
+    description: Mock payment confirmation
+  - name: Library
+    description: User purchased and claimed asset library
+  - name: Downloads
+    description: Secured timed download links and direct file download
+  - name: Creator
+    description: Creator analytics, sales history, and performance
+  - name: Admin
+    description: Administration dashboard, user moderation, and asset curation
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Service health check
+      description: Returns health status, server timestamp, uptime, and database connection state.
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            example: ok
+                          time:
+                            type: string
+                            format: date-time
+                          uptimeSec:
+                            type: integer
+                            example: 42
+                          db:
+                            type: string
+                            enum: [connected, disconnected]
+                            example: connected
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Creates a user account, sets the pf_rt refresh cookie, and returns access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: pf_rt=...; Path=/api/auth; HttpOnly
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponseData'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate user
+      description: Logs in by email or username, updates lastLoginAt, sets pf_rt cookie, and returns access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: pf_rt=...; Path=/api/auth; HttpOnly
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponseData'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      description: Validates pf_rt refresh cookie, rotates the refresh cookie, and issues a new access token.
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponseData'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out user
+      security:
+        - bearerAuth: []
+      description: Clears refresh cookie and increments user tokenVersion to invalidate existing tokens.
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: 'null'
+                        example: null
+                      message:
+                        type: string
+                        example: Logged out
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserMe'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    patch:
+      tags: [Users]
+      summary: Update profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserMe'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /users/me/avatar:
+    post:
+      tags: [Users]
+      summary: Upload user avatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserMe'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '413':
+          $ref: '#/components/responses/FileTooLargeError'
+        '415':
+          $ref: '#/components/responses/UnsupportedFileError'
+
+  /users/me/password:
+    patch:
+      tags: [Users]
+      summary: Change password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: 'null'
+                        example: null
+                      message:
+                        type: string
+                        example: Password updated. Please log in again on other devices.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/me/become-creator:
+    post:
+      tags: [Users]
+      summary: Become a creator
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Role updated to creator
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserMe'
+                      message:
+                        type: string
+                        example: You are now a creator! Head to the Creator Studio.
+
+  /users/me/wishlist:
+    get:
+      tags: [Users]
+      summary: Get user wishlist
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of wishlisted assets in reverse addition order
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AssetCard'
+
+  /users/me/wishlist/{assetId}:
+    post:
+      tags: [Users]
+      summary: Add asset to wishlist (idempotent)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{24}$'
+      responses:
+        '200':
+          description: Wishlist updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlist:
+                            type: array
+                            items:
+                              type: string
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    delete:
+      tags: [Users]
+      summary: Remove asset from wishlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-f0-9]{24}$'
+      responses:
+        '200':
+          description: Asset removed from wishlist
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          wishlist:
+                            type: array
+                            items:
+                              type: string
+
+  /users/{username}:
+    get:
+      tags: [Users]
+      summary: Get public creator profile and performance stats
+      parameters:
+        - in: path
+          name: username
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public user profile with aggregated metrics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/UserPublic'
+                          stats:
+                            type: object
+                            properties:
+                              assetCount:
+                                type: integer
+                              totalSales:
+                                type: integer
+                              totalDownloads:
+                                type: integer
+                              avgRating:
+                                type: number
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /assets:
+    get:
+      tags: [Assets]
+      summary: Browse and search published assets
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: tags
+          schema:
+            type: string
+        - in: query
+          name: minPrice
+          schema:
+            type: integer
+        - in: query
+          name: maxPrice
+          schema:
+            type: integer
+        - in: query
+          name: free
+          schema:
+            type: string
+            enum: ['true']
+        - in: query
+          name: license
+          schema:
+            type: string
+            enum: [cc0, standard, extended]
+        - in: query
+          name: mediaKind
+          schema:
+            type: string
+            enum: [image, audio, other]
+        - in: query
+          name: creator
+          schema:
+            type: string
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [relevance, newest, popular, top-rated, price-asc, price-desc]
+            default: newest
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 24
+            maximum: 48
+      responses:
+        '200':
+          description: List of matching asset cards with pagination meta
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AssetCard'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+    post:
+      tags: [Assets]
+      summary: Create and publish a new asset
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, description, category, tags, price, license, fileFormats, thumbnail, file]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                tags:
+                  type: string
+                price:
+                  type: integer
+                license:
+                  type: string
+                fileFormats:
+                  type: string
+                meta:
+                  type: string
+                thumbnail:
+                  type: string
+                  format: binary
+                previews:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Asset published
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AssetDetail'
+
+  /assets/home:
+    get:
+      tags: [Assets]
+      summary: Home page curated asset collections
+      responses:
+        '200':
+          description: Featured, trending, newest, freebies, and audio asset lists
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          featured:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AssetCard'
+                          trending:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AssetCard'
+                          newest:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AssetCard'
+                          freebies:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AssetCard'
+                          audio:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AssetCard'
+
+  /assets/categories:
+    get:
+      tags: [Assets]
+      summary: Category summary with published asset counts
+      responses:
+        '200':
+          description: Published counts across all 10 categories
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            key:
+                              type: string
+                            label:
+                              type: string
+                            count:
+                              type: integer
+                            mediaKind:
+                              type: string
+
+  /assets/tags:
+    get:
+      tags: [Assets]
+      summary: Top 30 tags
+      responses:
+        '200':
+          description: Most common tags with asset counts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            tag:
+                              type: string
+                            count:
+                              type: integer
+
+  /assets/mine:
+    get:
+      tags: [Assets]
+      summary: List creator's own assets
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [published, rejected, archived]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 24
+      responses:
+        '200':
+          description: Creator's assets with status and rejection reasons
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/AssetCard'
+                            - type: object
+                              properties:
+                                status:
+                                  type: string
+                                rejectionReason:
+                                  type: string
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+
+  /assets/{slug}:
+    get:
+      tags: [Assets]
+      summary: Get full asset details by slug
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed asset view
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AssetDetail'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /assets/{slug}/related:
+    get:
+      tags: [Assets]
+      summary: Get related assets
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Up to 6 related asset cards
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AssetCard'
+
+  /assets/{id}:
+    patch:
+      tags: [Assets]
+      summary: Update existing asset
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                tags:
+                  type: string
+                price:
+                  type: integer
+                license:
+                  type: string
+                fileFormats:
+                  type: string
+                meta:
+                  type: string
+                thumbnail:
+                  type: string
+                  format: binary
+                previews:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Asset updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AssetDetail'
+    delete:
+      tags: [Assets]
+      summary: Soft-delete asset (archive)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Asset archived
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: 'null'
+                        example: null
+
+  /reviews:
+    get:
+      tags: [Reviews]
+      summary: List reviews for an asset
+      parameters:
+        - in: query
+          name: asset
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 24
+      responses:
+        '200':
+          description: Reviews and rating distribution summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          reviews:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Review'
+                          summary:
+                            type: object
+                            properties:
+                              avg:
+                                type: number
+                              count:
+                                type: integer
+                              distribution:
+                                type: object
+                                properties:
+                                  1: { type: integer }
+                                  2: { type: integer }
+                                  3: { type: integer }
+                                  4: { type: integer }
+                                  5: { type: integer }
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+    post:
+      tags: [Reviews]
+      summary: Create a review for a purchased asset
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetId, rating]
+              properties:
+                assetId:
+                  type: string
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Review created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /reviews/{id}:
+    patch:
+      tags: [Reviews]
+      summary: Update review rating or comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Review updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Review'
+    delete:
+      tags: [Reviews]
+      summary: Delete review
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: 'null'
+                        example: null
+
+  /cart:
+    get:
+      tags: [Cart]
+      summary: View cart contents
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active cart items and subtotal
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CartView'
+    delete:
+      tags: [Cart]
+      summary: Clear entire cart
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Empty cart view
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CartView'
+
+  /cart/items:
+    post:
+      tags: [Cart]
+      summary: Add an asset to cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetId]
+              properties:
+                assetId:
+                  type: string
+      responses:
+        '200':
+          description: Updated cart view
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CartView'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /cart/items/{assetId}:
+    delete:
+      tags: [Cart]
+      summary: Remove an item from cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated cart view
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CartView'
+
+  /orders/checkout:
+    post:
+      tags: [Orders]
+      summary: Checkout cart items and create order
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assetIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Order created with mock payment session
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order:
+                            $ref: '#/components/schemas/OrderView'
+                          payment:
+                            type: object
+                            properties:
+                              provider:
+                                type: string
+                                example: mock
+                              providerOrderId:
+                                type: string
+
+  /orders:
+    get:
+      tags: [Orders]
+      summary: List user order history
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 24
+      responses:
+        '200':
+          description: Order history
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OrderView'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Get order by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed order view
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OrderView'
+
+  /payments/mock/confirm:
+    post:
+      tags: [Payments]
+      summary: Confirm or fail simulated payment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, outcome]
+              properties:
+                orderId:
+                  type: string
+                outcome:
+                  type: string
+                  enum: [success, failure]
+      responses:
+        '200':
+          description: Payment confirmed and items purchased
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order:
+                            $ref: '#/components/schemas/OrderView'
+                          purchasedAssetIds:
+                            type: array
+                            items:
+                              type: string
+        '402':
+          $ref: '#/components/responses/PaymentFailedError'
+
+  /library:
+    get:
+      tags: [Library]
+      summary: Get user owned and claimed assets
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 24
+      responses:
+        '200':
+          description: Library items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LibraryItem'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+
+  /library/claim/{assetId}:
+    post:
+      tags: [Library]
+      summary: Claim a free asset directly into user library
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Free asset claimed into library
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LibraryItem'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /downloads/{assetId}:
+    get:
+      tags: [Downloads]
+      summary: Generate a short-lived download token link
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Download link details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url:
+                            type: string
+                          expiresAt:
+                            type: string
+                            format: date-time
+                          fileName:
+                            type: string
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /downloads/file/{token}:
+    get:
+      tags: [Downloads]
+      summary: Stream downloadable asset file attachment
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File download binary stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /creator/stats:
+    get:
+      tags: [Creator]
+      summary: Get creator revenue, downloads, top assets, and performance charts
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: range
+          schema:
+            type: string
+            enum: [7d, 30d, 90d]
+            default: 30d
+      responses:
+        '200':
+          description: Creator analytics summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totals:
+                            type: object
+                            properties:
+                              revenue: { type: integer }
+                              sales: { type: integer }
+                              downloads: { type: integer }
+                              views: { type: integer }
+                              assets: { type: integer }
+                              avgRating: { type: number }
+                              wishlists: { type: integer }
+                          series:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                date: { type: string }
+                                revenue: { type: integer }
+                                sales: { type: integer }
+                          topAssets:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                asset:
+                                  $ref: '#/components/schemas/AssetCard'
+                                revenue: { type: integer }
+                                sales: { type: integer }
+                          categoryBreakdown:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                category: { type: string }
+                                sales: { type: integer }
+                                revenue: { type: integer }
+
+  /creator/sales:
+    get:
+      tags: [Creator]
+      summary: List itemized sales history for creator
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 24
+      responses:
+        '200':
+          description: Sales transactions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            orderId: { type: string }
+                            asset:
+                              type: object
+                              properties:
+                                _id: { type: string }
+                                title: { type: string }
+                                slug: { type: string }
+                                thumbnail:
+                                  type: object
+                                  properties:
+                                    url: { type: string }
+                            buyer:
+                              type: object
+                              properties:
+                                username: { type: string }
+                                avatarUrl: { type: string }
+                            price: { type: integer }
+                            creatorEarning: { type: integer }
+                            paidAt: { type: string, format: date-time }
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+
+  /admin/stats:
+    get:
+      tags: [Admin]
+      summary: Platform-wide admin metrics and timeline series
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Platform statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          users: { type: integer }
+                          creators: { type: integer }
+                          assets: { type: integer }
+                          orders: { type: integer }
+                          revenue: { type: integer }
+                          platformFees: { type: integer }
+                          signupsSeries:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                date: { type: string }
+                                count: { type: integer }
+                          revenueSeries:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                date: { type: string }
+                                revenue: { type: integer }
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List registered users with filter controls
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: role
+          schema: { type: string, enum: [buyer, creator, admin] }
+        - in: query
+          name: banned
+          schema: { type: string, enum: ['true', 'false'] }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 24 }
+      responses:
+        '200':
+          description: Admin user list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/UserPublic'
+                            - type: object
+                              properties:
+                                email: { type: string }
+                                isBanned: { type: boolean }
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+
+  /admin/users/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update user role or suspension status
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [buyer, creator, admin]
+                isBanned:
+                  type: boolean
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserPublic'
+
+  /admin/assets:
+    get:
+      tags: [Admin]
+      summary: List all catalog assets across all statuses
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [published, rejected, archived] }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 24 }
+      responses:
+        '200':
+          description: Admin asset list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/AssetCard'
+                            - type: object
+                              properties:
+                                status: { type: string }
+                                rejectionReason: { type: string }
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+
+  /admin/assets/{id}:
+    patch:
+      tags: [Admin]
+      summary: Moderate asset status, feature flag, or rejection reason
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [published, rejected, archived]
+                isFeatured:
+                  type: boolean
+                rejectionReason:
+                  type: string
+      responses:
+        '200':
+          description: Asset moderated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/AssetCard'
+                          - type: object
+                            properties:
+                              status: { type: string }
+                              rejectionReason: { type: string }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequestError:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    UnauthorizedError:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ForbiddenError:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFoundError:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ConflictError:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    PaymentFailedError:
+      description: Payment failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    FileTooLargeError:
+      description: File too large
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    UnsupportedFileError:
+      description: Unsupported file type
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          nullable: true
+        meta:
+          $ref: '#/components/schemas/Meta'
+        message:
+          type: string
+
+    ErrorEnvelope:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Some fields are invalid
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  path:
+                    type: string
+                  message:
+                    type: string
+
+    Meta:
+      type: object
+      required: [page, limit, total, totalPages, hasNext]
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 24
+        total:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 5
+        hasNext:
+          type: boolean
+          example: true
+
+    UserPublic:
+      type: object
+      required: [_id, name, username, avatarUrl, bio, socials, role, createdAt]
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+        avatarUrl:
+          type: string
+        bio:
+          type: string
+        socials:
+          type: object
+          properties:
+            website: { type: string }
+            twitter: { type: string }
+            itchio: { type: string }
+            github: { type: string }
+        role:
+          type: string
+          enum: [buyer, creator, admin]
+        createdAt:
+          type: string
+          format: date-time
+
+    UserMe:
+      allOf:
+        - $ref: '#/components/schemas/UserPublic'
+        - type: object
+          required: [email, wishlist, lastLoginAt]
+          properties:
+            email:
+              type: string
+              format: email
+            wishlist:
+              type: array
+              items:
+                type: string
+            lastLoginAt:
+              type: string
+              format: date-time
+              nullable: true
+
+    AssetCard:
+      type: object
+      required: [_id, slug, title, category, mediaKind, thumbnail, previewAudioUrl, price, isFree, license, tags, isFeatured, stats, creator, createdAt]
+      properties:
+        _id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+        mediaKind:
+          type: string
+          enum: [image, audio, other]
+        thumbnail:
+          type: object
+          required: [url]
+          properties:
+            url: { type: string }
+        previewAudioUrl:
+          type: string
+          nullable: true
+        price:
+          type: integer
+        isFree:
+          type: boolean
+        license:
+          type: string
+          enum: [cc0, standard, extended]
+        tags:
+          type: array
+          items:
+            type: string
+        isFeatured:
+          type: boolean
+        stats:
+          type: object
+          properties:
+            sales: { type: integer }
+            downloads: { type: integer }
+            ratingAvg: { type: number }
+            ratingCount: { type: integer }
+        creator:
+          type: object
+          properties:
+            _id: { type: string }
+            username: { type: string }
+            name: { type: string }
+            avatarUrl: { type: string }
+        createdAt:
+          type: string
+          format: date-time
+
+    AssetDetail:
+      allOf:
+        - $ref: '#/components/schemas/AssetCard'
+        - type: object
+          required: [description, previews, fileFormats, meta, fileInfo, status, rejectionReason, stats, updatedAt, isOwned, inWishlist, isMine]
+          properties:
+            description:
+              type: string
+            previews:
+              type: array
+              items:
+                type: object
+                properties:
+                  url: { type: string }
+                  kind:
+                    type: string
+                    enum: [image, audio]
+            fileFormats:
+              type: array
+              items:
+                type: string
+            meta:
+              type: object
+              properties:
+                resolution: { type: string }
+                frames: { type: integer }
+                durationSec: { type: number }
+                bpm: { type: number }
+                loopable: { type: boolean }
+                sampleRate: { type: number }
+            fileInfo:
+              type: object
+              properties:
+                format: { type: string }
+                bytes: { type: integer }
+                originalName: { type: string }
+            status:
+              type: string
+              enum: [published, rejected, archived]
+            rejectionReason:
+              type: string
+            stats:
+              type: object
+              properties:
+                views: { type: integer }
+                downloads: { type: integer }
+                sales: { type: integer }
+                ratingAvg: { type: number }
+                ratingCount: { type: integer }
+                wishlistCount: { type: integer }
+            updatedAt:
+              type: string
+              format: date-time
+            isOwned:
+              type: boolean
+            inWishlist:
+              type: boolean
+            isMine:
+              type: boolean
+
+    Review:
+      type: object
+      required: [_id, rating, comment, createdAt, updatedAt, user]
+      properties:
+        _id:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        user:
+          type: object
+          properties:
+            _id: { type: string }
+            username: { type: string }
+            name: { type: string }
+            avatarUrl: { type: string }
+
+    CartView:
+      type: object
+      required: [items, subtotal, count]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              asset:
+                $ref: '#/components/schemas/AssetCard'
+              addedAt:
+                type: string
+                format: date-time
+        subtotal:
+          type: integer
+        count:
+          type: integer
+
+    OrderView:
+      type: object
+      required: [_id, items, subtotal, platformFee, total, currency, status, provider, paidAt, createdAt]
+      properties:
+        _id:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              asset: { type: string }
+              title: { type: string }
+              price: { type: integer }
+              creator: { type: string }
+              license: { type: string }
+              creatorEarning: { type: integer }
+        subtotal:
+          type: integer
+        platformFee:
+          type: integer
+        total:
+          type: integer
+        currency:
+          type: string
+          example: INR
+        status:
+          type: string
+          enum: [created, paid, failed]
+        provider:
+          type: string
+          enum: [mock, free]
+        providerOrderId:
+          type: string
+        providerPaymentId:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    LibraryItem:
+      type: object
+      required: [_id, asset, pricePaid, downloadCount, lastDownloadedAt, createdAt]
+      properties:
+        _id:
+          type: string
+        asset:
+          $ref: '#/components/schemas/AssetCard'
+        pricePaid:
+          type: integer
+        downloadCount:
+          type: integer
+        lastDownloadedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    RegisterRequest:
+      type: object
+      required: [name, username, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        username:
+          type: string
+          minLength: 3
+          maxLength: 20
+          pattern: '^[a-z0-9_]+$'
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+
+    LoginRequest:
+      type: object
+      required: [identifier, password]
+      properties:
+        identifier:
+          type: string
+        password:
+          type: string
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        username:
+          type: string
+          minLength: 3
+          maxLength: 20
+        bio:
+          type: string
+          maxLength: 300
+        socials:
+          type: object
+          properties:
+            website: { type: string }
+            twitter: { type: string }
+            itchio: { type: string }
+            github: { type: string }
+
+    UpdatePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 72
+
+    AuthResponseData:
+      type: object
+      required: [user, accessToken]
+      properties:
+        user:
+          $ref: '#/components/schemas/UserMe'
+        accessToken:
+          type: string
