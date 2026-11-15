@@ -63,8 +63,51 @@ import type { CreateAssetBody, CreateReviewBody, UpdateReviewBody } from '@/type
 
 // ---------- helpers ----------
 const delay = () => new Promise((r) => setTimeout(r, 250 + Math.random() * 350))
-function fail(status: number, code: string, message: string): never {
-  throw new ApiClientError(status, code, message)
+function fail(status: number, code: string, message: string, details?: { path: string; message: string }[]): never {
+  throw new ApiClientError(status, code, message, details)
+}
+
+/** Simulates multipart upload progress so the client progress UI behaves like the real API. */
+async function simulateUpload(totalBytes: number, onProgress?: (p: number) => void) {
+  if (!onProgress) return
+  const steps = Math.min(24, Math.max(8, Math.round(totalBytes / 200_000)))
+  for (let i = 1; i <= steps; i++) {
+    await new Promise((r) => setTimeout(r, 70 + Math.random() * 60))
+    onProgress(Math.round((i / steps) * 100))
+  }
+}
+
+const CATEGORY_KEYS = ['sprites', 'tilesets', 'characters', 'ui', 'backgrounds', 'vfx', 'fonts', '3d', 'sfx', 'music']
+
+/** Mirrors the server zod rules for asset fields; partial = PATCH. */
+function validateAssetBody(body: Partial<CreateAssetBody>, partial: boolean) {
+  const d: { path: string; message: string }[] = []
+  const has = (k: keyof CreateAssetBody) => body[k] !== undefined
+  if (!partial || has('title')) {
+    const t = (body.title ?? '').trim()
+    if (t.length < 3 || t.length > 80) d.push({ path: 'title', message: 'Title must be 3-80 characters' })
+  }
+  if (!partial || has('description')) {
+    const t = (body.description ?? '').trim()
+    if (t.length < 20 || t.length > 5000) d.push({ path: 'description', message: 'Description must be 20-5000 characters' })
+  }
+  if (!partial || has('category')) {
+    if (!CATEGORY_KEYS.includes(String(body.category))) d.push({ path: 'category', message: 'Pick a valid category' })
+  }
+  if (has('price')) {
+    const n = Number(body.price)
+    if (!Number.isInteger(n) || n < 0 || n > 50000) d.push({ path: 'price', message: 'Price must be a whole number of rupees from 0 to 50,000' })
+  }
+  if (has('license') && !['cc0', 'standard', 'extended'].includes(String(body.license))) d.push({ path: 'license', message: 'Pick a valid license' })
+  if (has('tags')) {
+    const tags = String(body.tags).split(',').map((t) => t.trim()).filter(Boolean)
+    if (tags.length > 10) d.push({ path: 'tags', message: 'Use at most 10 tags' })
+    if (tags.some((t) => t.length > 24)) d.push({ path: 'tags', message: 'Each tag must be 24 characters or fewer' })
+  }
+  if (has('meta') && body.meta) {
+    try { JSON.parse(String(body.meta)) } catch { d.push({ path: 'meta', message: 'Meta must be valid JSON' }) }
+  }
+  if (d.length) fail(400, 'VALIDATION_ERROR', 'Some fields need attention', d)
 }
 function badRequest(m: string): never { return fail(400, 'BAD_REQUEST', m) }
 function unauthorized(m = 'Authentication required'): never { return fail(401, 'UNAUTHORIZED', m) }
@@ -547,9 +590,13 @@ export const mockAssets: AssetsApi = {
       .map(toCard)
   },
 
-  async create(body: CreateAssetBody, files: { thumbnail: File; previews?: File[]; file: File }) {
-    await delay()
+  async create(body: CreateAssetBody, files: { thumbnail: File; previews?: File[]; file: File }, onProgress?: (p: number) => void) {
     const u = requireRole('creator', 'admin')
+    validateAssetBody(body, false)
+    if (!files?.thumbnail) fail(400, 'VALIDATION_ERROR', 'A thumbnail is required', [{ path: 'thumbnail', message: 'A thumbnail image is required' }])
+    if (!files?.file) fail(400, 'VALIDATION_ERROR', 'The main file is required', [{ path: 'file', message: 'Upload the file buyers will download' }])
+    const bytes = [files.thumbnail, files.file, ...(files.previews ?? [])].reduce((s, f) => s + (f?.size ?? 0), 0)
+    await simulateUpload(bytes, onProgress)
     const patch = parseAssetBody(body)
     const category = (patch.category ?? body.category) as Category
     const mk = category === 'sfx' || category === 'music' ? 'audio' : category === 'fonts' || category === '3d' ? 'other' : 'image'
@@ -596,9 +643,12 @@ export const mockAssets: AssetsApi = {
     return toDetail(asset, u)
   },
 
-  async update(id: string, body: UpdateAssetBody, files?: { thumbnail?: File; previews?: File[]; file?: File }) {
-    await delay()
+  async update(id: string, body: UpdateAssetBody, files?: { thumbnail?: File; previews?: File[]; file?: File }, onProgress?: (p: number) => void) {
     const u = currentUser()
+    validateAssetBody(body, true)
+    const bytes = [files?.thumbnail, files?.file, ...(files?.previews ?? [])].reduce((s, f) => s + (f?.size ?? 0), 0)
+    if (bytes) await simulateUpload(bytes, onProgress)
+    else await delay()
     const a = db.assets.find((x) => x._id === id)
     if (!a) notFound('Asset not found')
     if (u._id !== a.creator && u.role !== 'admin') forbidden()
@@ -1095,7 +1145,8 @@ export const mockAdmin: AdminApi = {
     if (body.role !== undefined) u.role = body.role
     if (body.isBanned !== undefined) u.isBanned = body.isBanned
     u.updatedAt = new Date().toISOString()
-    if (body.isBanned) setSessionUserId(null)
+    // banning signs the user out everywhere (their next request fails with ACCOUNT_BANNED)
+    if (body.isBanned) u.tokenVersion += 1
     saveDb(db)
     return toAdminUser(u)
   },

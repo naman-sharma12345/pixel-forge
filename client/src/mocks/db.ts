@@ -213,6 +213,17 @@ export function buildSeedDb(): MockDb {
 
   for (const c of CREATORS) users.push(mkUser(c.name, c.username, c.role, c.blurb))
   users.push(mkUser('Demo Player', 'demo', 'buyer', 'Just here to browse the forge.'))
+  users.push(mkUser('Forge Admin', 'admin', 'admin', 'Keeps the forge fires burning.'))
+  // recent buyers so admin signups and creator sales have realistic shape
+  const BUYERS: [string, string][] = [
+    ['Riya Sen', 'riyasen'], ['Leo Park', 'leopark'], ['Sam Okafor', 'samokafor'], ['Ivy Chen', 'ivychen'],
+    ['Theo Brandt', 'theob'], ['Maya Iyer', 'mayaiyer'], ['Kai Ruiz', 'kairuiz'], ['Zoe Lam', 'zoelam'],
+  ]
+  for (const [n, un] of BUYERS) {
+    const b = mkUser(n, un, 'buyer')
+    b.createdAt = daysAgo(int(rng, 1, 29))
+    users.push(b)
+  }
 
   const categories = Object.keys(ASSET_TITLES) as Category[]
   const audioKinds = ['coin', 'laser', 'jump', 'explosion', 'loop'] as const
@@ -364,11 +375,40 @@ export function buildSeedDb(): MockDb {
     a.stats.downloads += 1
   }
 
+  // ~140 paid orders from other buyers over the last 90 days
+  const buyers = users.filter((u) => u.role === 'buyer' && u.username !== 'demo')
+  const paidAssets = published.filter((a) => a.price > 0)
+  for (let i = 0; i < 140; i++) {
+    const b = pick(rng, buyers)
+    const a = pick(rng, paidAssets)
+    if (purchases.some((p) => p.user === b._id && p.asset === a._id)) continue
+    const when = daysAgo(int(rng, 1, 89), int(rng, 0, 20))
+    const order: MockOrder = {
+      _id: rid('o'),
+      user: b._id,
+      items: [{ asset: a._id, title: a.title, price: a.price, creator: a.creator, license: a.license, creatorEarning: earningFor(a.price) }],
+      subtotal: a.price,
+      platformFee: feeFor(a.price),
+      total: a.price,
+      currency: 'INR',
+      status: 'paid',
+      provider: 'mock',
+      providerOrderId: `mock_${rid('po')}`,
+      providerPaymentId: `mock_${rid('pp')}`,
+      paidAt: when,
+      createdAt: when,
+    }
+    orders.push(order)
+    purchases.push({ _id: rid('p'), user: b._id, asset: a._id, order: order._id, pricePaid: a.price, downloadCount: int(rng, 0, 4), lastDownloadedAt: when, createdAt: when })
+    a.stats.sales += 1
+    a.stats.downloads += 1
+  }
+
   return { users, assets, reviews, carts: [], orders, purchases }
 }
 
 // ---------- persistence ----------
-const KEY = 'pf_mock_db_v1'
+const KEY = 'pf_mock_db_v2'
 const SESSION_KEY = 'pf_mock_session'
 
 export function loadDb(): MockDb {

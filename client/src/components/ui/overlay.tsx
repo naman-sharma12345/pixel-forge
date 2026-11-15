@@ -328,13 +328,15 @@ export function Tabs({
 
 // ---------- Tooltip ----------
 export function Tooltip({ label, children, side = 'top' }: { label: string; children: ReactNode; side?: 'top' | 'bottom' }) {
+  const long = label.length > 40
   return (
     <span className="group/tt relative inline-flex">
       {children}
       <span
         role="tooltip"
         className={cn(
-          'pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-surface-3 px-2 py-1 text-xs text-text opacity-0 shadow-card transition-opacity duration-150 group-hover/tt:opacity-100',
+          'pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 rounded-md border border-border-strong bg-surface-3 px-2.5 py-1.5 text-xs leading-snug text-text opacity-0 shadow-card transition-opacity duration-150 group-hover/tt:opacity-100 group-focus-within/tt:opacity-100',
+          long ? 'w-64 whitespace-normal' : 'whitespace-nowrap',
           side === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
         )}
       >

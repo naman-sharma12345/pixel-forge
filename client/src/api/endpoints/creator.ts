@@ -1,4 +1,4 @@
-import { apiGet, type ListResult } from '../client'
+import { apiGet, apiGetList, type ListResult } from '../client'
 import type { CreatorRange, CreatorSale, CreatorStats } from '@/types/api'
 
 export interface CreatorApi {
@@ -8,5 +8,5 @@ export interface CreatorApi {
 
 export const creator: CreatorApi = {
   stats: (range = '30d') => apiGet('/creator/stats', { range }),
-  sales: (params) => apiGet('/creator/sales', params as Record<string, unknown>),
+  sales: (params) => apiGetList('/creator/sales', params as Record<string, unknown>),
 }

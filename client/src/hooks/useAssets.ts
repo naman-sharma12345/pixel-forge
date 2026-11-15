@@ -60,7 +60,10 @@ export function useCreateAsset() {
       files: Parameters<typeof api.assets.create>[1]
       onProgress?: (p: number) => void
     }) => api.assets.create(body, files, onProgress),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['assets'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['assets'] })
+      qc.invalidateQueries({ queryKey: ['creator'] })
+    },
   })
 }
 
@@ -81,6 +84,10 @@ export function useDeleteAsset() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.assets.remove(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['assets'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['assets'] })
+      qc.invalidateQueries({ queryKey: ['creator'] })
+      qc.invalidateQueries({ queryKey: ['admin'] })
+    },
   })
 }

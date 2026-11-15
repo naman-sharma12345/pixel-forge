@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Navbar, Footer, GlobalPlayer, CartDrawer, ScrollToTop, ErrorBoundary } from '@/components/layout'
 import { Spinner } from '@/components/ui'
+import { AdminLayout, StudioLayout } from '@/components/dashboard/layouts'
 import { useAuthStore } from '@/stores/auth'
 import type { Role } from '@/types/api'
 
@@ -107,35 +108,23 @@ export const router = createBrowserRouter([
       },
       {
         path: '/studio',
-        element: <RequireRole roles={['creator', 'admin']}><StudioOverviewPage /></RequireRole>,
-      },
-      {
-        path: '/studio/assets',
-        element: <RequireRole roles={['creator', 'admin']}><StudioAssetsPage /></RequireRole>,
-      },
-      {
-        path: '/studio/new',
-        element: <RequireRole roles={['creator', 'admin']}><StudioNewPage /></RequireRole>,
-      },
-      {
-        path: '/studio/edit/:id',
-        element: <RequireRole roles={['creator', 'admin']}><StudioEditPage /></RequireRole>,
-      },
-      {
-        path: '/studio/sales',
-        element: <RequireRole roles={['creator', 'admin']}><StudioSalesPage /></RequireRole>,
+        element: <RequireRole roles={['creator', 'admin']}><StudioLayout /></RequireRole>,
+        children: [
+          { index: true, element: <StudioOverviewPage /> },
+          { path: 'assets', element: <StudioAssetsPage /> },
+          { path: 'new', element: <StudioNewPage /> },
+          { path: 'edit/:id', element: <StudioEditPage /> },
+          { path: 'sales', element: <StudioSalesPage /> },
+        ],
       },
       {
         path: '/admin',
-        element: <RequireRole roles={['admin']}><AdminOverviewPage /></RequireRole>,
-      },
-      {
-        path: '/admin/users',
-        element: <RequireRole roles={['admin']}><AdminUsersPage /></RequireRole>,
-      },
-      {
-        path: '/admin/assets',
-        element: <RequireRole roles={['admin']}><AdminAssetsPage /></RequireRole>,
+        element: <RequireRole roles={['admin']}><AdminLayout /></RequireRole>,
+        children: [
+          { index: true, element: <AdminOverviewPage /> },
+          { path: 'users', element: <AdminUsersPage /> },
+          { path: 'assets', element: <AdminAssetsPage /> },
+        ],
       },
       { path: '*', element: <NotFoundPage /> },
     ],

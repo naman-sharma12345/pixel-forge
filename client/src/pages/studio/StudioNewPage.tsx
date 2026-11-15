@@ -1,5 +1,12 @@
-import { Placeholder } from '../Placeholder'
+import { Page } from '@/components/layout'
+import { DashHeader } from '@/components/dashboard/DashboardLayout'
+import { AssetWizard } from '@/features/studio/wizard/AssetWizard'
 
 export default function StudioNewPage() {
-  return <Placeholder title="Upload a new asset" pageTitle="New asset" description="Title, files, pricing and license." seed="upload" kind="sprites" />
+  return (
+    <Page title="Upload a new asset" description="Publish a new asset to Pixel Forge.">
+      <DashHeader eyebrow="Creator Studio" title="Upload a new asset" subtitle="Five quick steps. Your text is saved as a draft while you work." />
+      <AssetWizard mode="create" />
+    </Page>
+  )
 }

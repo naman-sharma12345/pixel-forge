@@ -35,13 +35,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           id={inputId}
           value={value}
           maxLength={maxLength}
+          aria-invalid={error ? true : rest['aria-invalid']}
+          aria-describedby={hint || error ? `${inputId}-desc` : undefined}
           className={cn(fieldBase, 'h-10', leftIcon && 'pl-9', error && 'border-danger focus:border-danger focus:ring-danger/30', className)}
           {...rest}
         />
       </div>
       {(hint || error || (counter && maxLength)) && (
         <div className="flex items-start justify-between gap-2 text-xs">
-          <span className={cn(error ? 'text-danger' : 'text-muted')}>{error ?? hint}</span>
+          <span id={`${inputId}-desc`} role={error ? 'alert' : undefined} className={cn(error ? 'text-danger' : 'text-muted')}>{error ?? hint}</span>
           {counter && maxLength ? (
             <span className="font-mono text-subtle">{length}/{maxLength}</span>
           ) : null}
@@ -75,12 +77,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         id={inputId}
         value={value}
         maxLength={maxLength}
+        aria-invalid={error ? true : rest['aria-invalid']}
+        aria-describedby={hint || error ? `${inputId}-desc` : undefined}
         className={cn(fieldBase, 'min-h-[110px] py-2.5 resize-y', error && 'border-danger focus:border-danger focus:ring-danger/30', className)}
         {...rest}
       />
       {(hint || error || (counter && maxLength)) && (
         <div className="flex items-start justify-between gap-2 text-xs">
-          <span className={cn(error ? 'text-danger' : 'text-muted')}>{error ?? hint}</span>
+          <span id={`${inputId}-desc`} role={error ? 'alert' : undefined} className={cn(error ? 'text-danger' : 'text-muted')}>{error ?? hint}</span>
           {counter && maxLength ? <span className="font-mono text-subtle">{length}/{maxLength}</span> : null}
         </div>
       )}
