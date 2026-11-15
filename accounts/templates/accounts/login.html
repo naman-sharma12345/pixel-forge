@@ -1,0 +1,17 @@
+{% extends 'accounts/_auth_base.html' %}
+{% block title %}Log in{% endblock %}
+{% block description %}Sign in to your Pixel Forge account.{% endblock %}
+{% block auth_title %}Welcome back{% endblock %}
+{% block auth_sub %}Log in to download your library, manage your wishlist and sell your work.{% endblock %}
+{% block auth_body %}
+<form method="post" novalidate class="stack" style="--gap:16px">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% include 'partials/messages_inline.html' %}
+  {% include 'partials/field.html' with field=form.username %}
+  {% include 'partials/field.html' with field=form.password %}
+  <button type="submit" class="pixel-btn pixel-btn--lg pixel-btn--block" style="margin-top:8px"><span>Log in <i data-lucide="arrow-right"></i></span></button>
+  <p class="help" style="text-align:center">Demo accounts: <code class="font-mono">demo</code>, <code class="font-mono">mirapixel</code> or <code class="font-mono">admin</code>, password <code class="font-mono">Password123</code></p>
+</form>
+{% endblock %}
+{% block auth_foot %}New to Pixel Forge? <a href="{% url 'accounts:register' %}{% if next %}?next={{ next|urlencode }}{% endif %}" style="color:var(--text);text-decoration:underline">Create a free account</a>{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load pf %}
+{% block title %}Cart{% endblock %}
+{% block description %}Review your cart before checkout.{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1120px;padding-top:32px">
+  <a href="{% url 'catalog:explore' %}" class="row muted" style="gap:6px;font-size:14px;margin-bottom:20px"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Continue browsing</a>
+  <div class="row between" style="margin-bottom:32px;align-items:flex-end">
+    <h1 class="page-title" style="font-size:2rem">Your cart {% if items %}<span class="font-mono subtle" style="font-size:1.25rem">({{ items|length }})</span>{% endif %}</h1>
+    {% if items %}<form method="post" action="{% url 'commerce:cart_clear' %}" data-confirm="This removes all {{ items|length }} item{{ items|length|pluralize }}. You can add them again from each asset page." data-confirm-title="Clear your cart?" data-confirm-label="Clear cart">{% csrf_token %}<button class="muted row" style="gap:6px;font-size:14px" type="submit"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Clear cart</button></form>{% endif %}
+  </div>
+
+  {% if items %}
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));align-items:start;--gap:24px">
+    <ul class="stack" style="--gap:12px;grid-column:span 1">
+      {% for item in items %}
+      <li class="card" data-cart-row style="display:flex;gap:16px;padding:14px">
+        <a href="{{ item.asset.get_absolute_url }}"><img class="thumb" src="{{ item.asset.thumbnail.url }}" alt="" width="96" height="96" style="width:88px;height:88px;border-radius:10px"></a>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div class="row between" style="align-items:flex-start;gap:12px">
+            <div style="min-width:0"><p class="subtle" style="font-size:12px">{{ item.asset.category.name }}</p><a class="clamp-1" style="font-family:var(--font-display);font-weight:600" href="{{ item.asset.get_absolute_url }}">{{ item.asset.title }}</a></div>
+            <span class="price" style="font-size:16px">{{ item.asset.price|inr }}</span>
+          </div>
+          <div class="row muted" style="gap:6px;font-size:12px;margin-top:6px"><span class="avatar" style="width:16px;height:16px"><img src="{{ item.asset.creator.avatar_url }}" alt="" width="16" height="16"></span>{{ item.asset.creator.display_name }}</div>
+          <div class="row between" style="margin-top:auto;padding-top:8px;gap:8px">
+            <span class="badge" style="font-size:11px">{{ item.asset.get_license_display|split:' - '|first }} license</span>
+            <form method="post" action="{% url 'commerce:cart_remove' item.asset.slug %}" data-ajax="remove">{% csrf_token %}<button type="submit" class="btn btn-ghost btn-sm" aria-label="Remove {{ item.asset.title }} from cart"><i data-lucide="trash-2"></i> Remove</button></form>
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <aside class="panel" style="padding:24px;position:sticky;top:84px">
+      <h2 style="font-size:1.15rem">Order summary</h2>
+      <dl class="stack" style="--gap:12px;margin:20px 0 0;font-size:14px">
+        <div class="row between"><dt class="muted">Subtotal · {{ items|length }} item{{ items|length|pluralize }}</dt><dd class="font-mono" style="margin:0">{{ subtotal|inr }}</dd></div>
+        <div class="row between"><dt class="muted">Platform fee ({{ PLATFORM_FEE_PERCENT }}%)</dt><dd class="font-mono text-success" style="margin:0">Included</dd></div>
+        <div class="row between"><dt class="muted">Taxes</dt><dd class="font-mono subtle" style="margin:0">₹0 · demo</dd></div>
+      </dl>
+      <hr style="margin:20px 0">
+      <div class="row between" style="align-items:baseline"><span style="font-weight:600">Total</span><span class="font-mono" style="font-size:1.6rem;font-weight:600">{{ subtotal|inr }}</span></div>
+      <div class="card" style="margin-top:16px;padding:12px;background:rgba(22,22,34,.6)">
+        <div style="display:flex;height:6px;border-radius:99px;overflow:hidden"><span style="width:{{ CREATOR_SHARE }}%;background:var(--gradient)"></span><span style="flex:1;background:var(--border-strong)"></span></div>
+        <p class="muted" style="font-size:11px;margin-top:8px"><b class="font-mono" style="color:var(--text)">{{ creator_share|inr }}</b> goes directly to the creators.</p>
+      </div>
+      <form method="post" action="{% url 'commerce:checkout' %}" style="margin-top:20px">{% csrf_token %}
+        <button type="submit" class="pixel-btn pixel-btn--lg pixel-btn--block"><span><i data-lucide="lock"></i> Checkout · {{ subtotal|inr }}</span></button></form>
+      <ul class="stack muted" style="--gap:8px;margin-top:20px;font-size:12px"><li class="row" style="gap:8px"><i data-lucide="zap" class="text-warning" style="width:14px;height:14px"></i> Instant download after payment</li><li class="row" style="gap:8px"><i data-lucide="shield-check" class="text-success" style="width:14px;height:14px"></i> Demo checkout, no real money is charged</li></ul>
+    </aside>
+  </div>
+  {% else %}
+    {% include 'partials/empty_state.html' with art='cart' title='Your cart is empty' text='Sprites, sounds and tilesets you add will wait here until you’re ready.' action_url='/explore/' action_label='Explore assets' action2_url='/wishlist/' action2_label='Open wishlist' %}
+  {% endif %}
+</div>
+{% endblock %}

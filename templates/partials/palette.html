@@ -1,0 +1,24 @@
+{# Command palette: AJAX search modal (Ctrl/Cmd K). Live results from /api/search/?q= #}
+<div class="overlay overlay--top" id="palette" role="dialog" aria-modal="true" aria-label="Search" data-modal data-search-url="{% url 'catalog:api_search' %}" data-explore-url="{% url 'catalog:explore' %}">
+  <div class="overlay__backdrop" data-close></div>
+  <div class="palette">
+    <form class="palette__input" role="search" action="{% url 'catalog:explore' %}" method="get">
+      <i data-lucide="search"></i>
+      <input type="search" name="q" id="palette-input" placeholder="Search sprites, sfx, music, packs…" autocomplete="off" aria-label="Search assets" aria-controls="palette-list" role="combobox" aria-expanded="true">
+      <kbd class="kbd">ESC</kbd>
+    </form>
+    <div class="palette__list" id="palette-list" role="listbox" aria-label="Results">
+      <div id="palette-results"></div>
+      <div id="palette-recent"></div>
+      <p class="palette__group">Quick links</p>
+      <a class="palette__item" role="option" data-href="{% url 'catalog:explore' %}" href="{% url 'catalog:explore' %}"><i data-lucide="compass"></i> Explore</a>
+      <a class="palette__item" role="option" data-href="{% url 'catalog:explore' %}?category=sfx" href="{% url 'catalog:explore' %}?category=sfx"><i data-lucide="audio-lines"></i> Sound Effects</a>
+      {% if user.is_authenticated %}
+      <a class="palette__item" role="option" data-href="{% url 'commerce:library' %}" href="{% url 'commerce:library' %}"><i data-lucide="library"></i> Library</a>
+      {% if user.is_creator %}<a class="palette__item" role="option" data-href="{% url 'dashboard:studio' %}" href="{% url 'dashboard:studio' %}"><i data-lucide="store"></i> Studio</a>{% endif %}
+      <a class="palette__item" role="option" data-href="{% url 'accounts:settings' %}" href="{% url 'accounts:settings' %}"><i data-lucide="settings"></i> Settings</a>
+      {% endif %}
+    </div>
+    <div class="palette__foot"><span><kbd class="kbd">↑</kbd> <kbd class="kbd">↓</kbd> navigate</span><span><kbd class="kbd">Enter</kbd> open</span><span><kbd class="kbd">Esc</kbd> close</span></div>
+  </div>
+</div>

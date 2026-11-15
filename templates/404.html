@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Page not found{% endblock %}
+{% block description %}This level doesn't exist. Head back to the marketplace.{% endblock %}
+{% block content %}
+<section class="container" style="padding:64px 0;text-align:center">
+  <p class="eyebrow">Error 404</p>
+  <h1 class="font-pixel" style="font-size:clamp(64px,16vw,140px);line-height:1;margin:12px 0;background:linear-gradient(90deg,var(--primary),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent" aria-label="404">404</h1>
+  <p class="page-title" style="font-size:22px">This level doesn't exist</p>
+  <p class="muted" style="max-width:480px;margin:10px auto 24px">The page you were after has moved, or never existed. While you are here, jump over a few blocks.</p>
+  <div style="max-width:640px;margin:0 auto 12px">
+    <canvas id="minigame" width="640" height="180" style="width:100%;height:auto;border:2px solid var(--border);image-rendering:pixelated;background:#05050a;cursor:pointer" role="img" aria-label="Mini game: press space or tap to jump over pixel blocks"></canvas>
+    <div class="row between font-mono" style="font-size:12px;margin-top:8px"><span>Score <strong id="mg-score">0</strong></span><span id="mg-hint" class="subtle" aria-live="polite"></span><span>Best <strong id="mg-best">0</strong></span></div>
+  </div>
+  <div class="row-wrap" style="justify-content:center;gap:12px;margin-top:20px">
+    <a class="btn btn-primary" href="{% url 'core:home' %}">Back to home</a>
+    <a class="btn btn-secondary" href="{% url 'catalog:explore' %}">Explore assets</a>
+  </div>
+</section>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/minigame.js' %}" defer></script>{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load pf %}
+{% block title %}Settings{% endblock %}
+{% block description %}Profile, security and order history.{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1120px;padding-top:32px">
+  <h1 class="page-title" style="margin-bottom:32px;font-size:2rem">Settings</h1>
+  <div class="settings">
+    <aside>
+      <div class="card" style="display:none;align-items:center;gap:12px;padding:12px;margin-bottom:16px" id="settings-who">
+        <span class="avatar" style="width:40px;height:40px"><img src="{{ user.avatar_url }}" alt="" width="40" height="40"></span>
+        <div style="min-width:0"><p class="truncate" style="font-weight:600;font-size:14px">{{ user.display_name }}</p><a class="subtle" style="font-size:12px" href="{{ user.get_absolute_url }}">View public profile</a></div>
+      </div>
+      <nav class="side-nav" aria-label="Settings sections">
+        <a href="{% url 'accounts:settings' %}" class="{% if tab == 'profile' %}is-active{% endif %}" {% if tab == 'profile' %}aria-current="page"{% endif %}><i data-lucide="user-round"></i><span>Profile</span></a>
+        <a href="{% url 'accounts:settings' %}?tab=security" class="{% if tab == 'security' %}is-active{% endif %}" {% if tab == 'security' %}aria-current="page"{% endif %}><i data-lucide="lock"></i><span>Security</span></a>
+        <a href="{% url 'accounts:settings' %}?tab=orders" class="{% if tab == 'orders' %}is-active{% endif %}" {% if tab == 'orders' %}aria-current="page"{% endif %}><i data-lucide="receipt"></i><span>Orders</span></a>
+      </nav>
+    </aside>
+
+    <section aria-label="{{ tab|title }}" style="min-width:0">
+      {% if tab == 'profile' %}
+        {% if user.role == 'buyer' %}
+        <div class="card noise" style="padding:24px;margin-bottom:24px;border-color:rgba(139,92,246,.3);background:linear-gradient(135deg,rgba(139,92,246,.15),var(--surface) 60%);overflow:hidden">
+          <h2 style="font-size:1.15rem;display:flex;align-items:center;gap:8px"><i data-lucide="store" class="text-primary"></i> Become a creator</h2>
+          <p class="muted" style="margin-top:6px;font-size:14px">Turn your game dev skills into income on the marketplace.</p>
+          <ul class="checks" style="margin-top:16px"><li><i data-lucide="check"></i> Upload sprites, sfx, music, fonts and more</li><li><i data-lucide="check"></i> Set your own prices, including free</li><li><i data-lucide="check"></i> Keep {{ CREATOR_SHARE }}% of every sale</li><li><i data-lucide="check"></i> Sales analytics and downloadable reports</li></ul>
+          <form method="post" action="{% url 'accounts:become_creator' %}" style="margin-top:20px">{% csrf_token %}<button class="pixel-btn pixel-btn--lg" type="submit"><span>Start selling</span></button></form>
+        </div>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" novalidate class="stack" style="--gap:24px">
+          {% csrf_token %}<input type="hidden" name="form_name" value="profile">
+          {% include 'partials/messages_inline.html' with form=profile_form %}
+          <div class="card" style="padding:24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+            <label class="avatar-drop" title="Click to choose a picture"><img id="avatar-preview" src="{{ user.avatar_url }}" alt="Your avatar"><span class="sr-only">Upload avatar</span>{{ profile_form.avatar }}</label>
+            <div style="flex:1;min-width:200px"><p style="font-family:var(--font-display);font-weight:600">Profile picture</p><p class="muted" style="font-size:12px;margin-top:2px">Click the avatar to choose an image. PNG, JPG, WebP or GIF up to 2 MB.</p>
+              {% if profile_form.avatar.errors %}<ul class="errorlist" role="alert">{% for e in profile_form.avatar.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}</div>
+          </div>
+          <div class="card" style="padding:24px"><h2 style="font-size:1rem">Public profile</h2><p class="muted" style="font-size:12px;margin:2px 0 16px">Shown on your store page and next to your assets and reviews.</p>
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+              {% include 'partials/field.html' with field=profile_form.first_name %}
+              {% include 'partials/field.html' with field=profile_form.username %}
+              <div style="grid-column:1/-1">{% include 'partials/field.html' with field=profile_form.bio counter=300 %}</div>
+              {% include 'partials/field.html' with field=profile_form.website %}
+              {% include 'partials/field.html' with field=profile_form.twitter %}
+              {% include 'partials/field.html' with field=profile_form.itchio %}
+              {% include 'partials/field.html' with field=profile_form.github %}
+            </div>
+          </div>
+          <div class="row" style="justify-content:flex-end"><button class="btn btn-primary" type="submit"><i data-lucide="save"></i> Save changes</button></div>
+        </form>
+
+      {% elif tab == 'security' %}
+        <div class="card" style="padding:24px;max-width:560px">
+          <h2 style="font-size:1rem;display:flex;gap:8px;align-items:center"><i data-lucide="lock" class="text-primary"></i> Change password</h2>
+          <p class="muted" style="font-size:12px;margin:4px 0 20px">You stay signed in on this device.</p>
+          <form method="post" novalidate class="stack" style="--gap:16px">{% csrf_token %}<input type="hidden" name="form_name" value="password">
+            {% include 'partials/messages_inline.html' with form=password_form %}
+            {% include 'partials/field.html' with field=password_form.old_password %}
+            <div>{% include 'partials/field.html' with field=password_form.new_password1 %}<div class="strength" data-strength-for="id_new_password1" data-score="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
+            {% include 'partials/field.html' with field=password_form.new_password2 %}
+            <div class="row" style="justify-content:flex-end"><button class="btn btn-primary" type="submit">Update password</button></div>
+          </form>
+        </div>
+
+      {% else %}
+        {% if not orders %}
+          {% include 'partials/empty_state.html' with art='chest' title='No orders yet' text='Your purchases will show up here with a downloadable receipt.' action_url='/explore/' action_label='Explore assets' %}
+        {% else %}
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Order</th><th>Date</th><th>Items</th><th class="num">Total</th><th>Status</th><th>Receipt</th></tr></thead>
+          <tbody>
+          {% for o in orders %}
+            <tr>
+              <td class="font-mono" style="font-size:12px">{{ o.reference }}</td>
+              <td class="muted">{{ o.created_at|date:"j M Y" }}</td>
+              <td><details><summary style="cursor:pointer;color:var(--muted)">{{ o.items.count }} item{{ o.items.count|pluralize }}</summary>
+                <ul style="margin-top:6px">{% for i in o.items.all %}<li class="row between" style="gap:16px;font-size:13px;padding:2px 0"><span>{% if i.asset %}<a href="{{ i.asset.get_absolute_url }}" style="color:var(--text)">{{ i.title }}</a>{% else %}{{ i.title }}{% endif %}</span><span class="font-mono muted">{{ i.price|inr }}</span></li>{% endfor %}</ul></details></td>
+              <td class="num">{{ o.total|inr }}</td>
+              <td><span class="status status-{% if o.status == 'paid' %}published{% elif o.status == 'failed' %}rejected{% else %}archived{% endif %}">{{ o.get_status_display }}</span></td>
+              <td>{% if o.status == 'paid' %}<a class="btn btn-ghost btn-sm" href="{% url 'commerce:receipt' o.reference %}"><i data-lucide="file-text"></i> PDF</a>{% else %}<span class="subtle">–</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody></table></div>
+        {% endif %}
+      {% endif %}
+      <p class="subtle" style="margin-top:32px;font-size:12px">Signed in as {{ user.email }}{% if user.last_login %} · last login {{ user.last_login|timesince }} ago{% endif %}</p>
+    </section>
+  </div>
+</div>
+<style>@media (min-width:1024px){#settings-who{display:flex!important}}</style>
+{% endblock %}

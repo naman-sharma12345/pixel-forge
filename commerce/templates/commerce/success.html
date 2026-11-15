@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load pf %}
+{% block title %}Order complete{% endblock %}
+{% block description %}Your purchase was successful.{% endblock %}
+{% block body_attrs %} data-confetti{% endblock %}
+{% block content %}
+<div class="container" style="max-width:720px;padding-top:40px;text-align:center" data-confetti>
+  <img src="{% url 'core:illustration' 'chest' %}" alt="" width="128" height="128" class="pixelated" style="margin:0 auto;width:128px;height:128px">
+  <span class="font-pixel text-success" style="display:inline-flex;gap:6px;align-items:center;margin-top:8px;padding:6px 12px;border-radius:99px;background:rgba(163,230,53,.15);font-size:8px"><i data-lucide="check" style="width:12px;height:12px"></i> Payment complete</span>
+  <h1 class="page-title" style="font-size:clamp(1.8rem,4vw,2.4rem);margin-top:16px">Your assets are ready</h1>
+  <p class="muted" style="max-width:440px;margin:12px auto 0;line-height:1.6">Everything below is now in your library forever. Download now or come back any time. (Demo payment, no real money was charged.)</p>
+
+  <div class="receipt" style="margin-top:40px;text-align:left">
+    <div class="receipt__head"><p class="font-mono muted" style="font-size:12px">Order <span style="color:var(--text)">{{ order.reference }}</span> · {{ order.paid_at|date:"j M Y" }}</p><span class="badge badge-success" style="text-transform:capitalize">{{ order.get_status_display }}</span></div>
+    <ul>
+      {% for i in items %}
+      <li class="row" style="gap:16px;padding:16px;border-bottom:1px solid var(--border)">
+        {% if i.asset %}<img class="thumb" src="{{ i.asset.thumbnail.url }}" alt="" width="56" height="56" style="width:56px;height:56px;border-radius:10px">{% endif %}
+        <div class="grow"><p class="truncate" style="font-weight:600;font-size:14px">{% if i.asset %}<a href="{{ i.asset.get_absolute_url }}">{{ i.title }}</a>{% else %}{{ i.title }}{% endif %}</p><p class="font-mono subtle" style="font-size:12px">{{ i.price|inr }}</p></div>
+        {% if i.asset %}<a class="btn btn-primary btn-sm" href="{% url 'commerce:download' i.asset.slug %}" aria-label="Download {{ i.title }}"><i data-lucide="download"></i> Download</a>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="row between" style="padding:16px 20px"><span class="muted" style="font-size:14px">Total paid</span><span class="font-mono" style="font-size:1.15rem;font-weight:600">{{ order.total|inr }}</span></div>
+  </div>
+
+  <div class="row-wrap" style="justify-content:center;gap:12px;margin-top:32px">
+    <a class="pixel-btn" href="{% url 'commerce:library' %}"><span><i data-lucide="library"></i> Open library</span></a>
+    <a class="btn btn-secondary" href="{% url 'commerce:receipt' order.reference %}" target="_blank" rel="noopener"><i data-lucide="file-text"></i> Receipt (PDF)</a>
+    <a class="btn btn-ghost" href="{% url 'catalog:explore' %}">Keep exploring <i data-lucide="arrow-right"></i></a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'dashboard/_base.html' %}
+{% load pf %}
+{% block title %}Users{% endblock %}
+{% block description %}Manage roles and bans.{% endblock %}
+{% block dash_content %}
+<header class="page-head"><div><p class="eyebrow">Admin</p><h1 class="page-title" style="margin-top:6px">Users</h1><p class="page-sub">{{ total }} matching account{{ total|pluralize }}</p></div></header>
+
+<form method="get" class="row-wrap" style="gap:8px;margin-bottom:16px">
+  <label class="sr-only" for="id_q">Search users</label>
+  <div class="input-icon"><i data-lucide="search"></i><input class="input" id="id_q" type="search" name="q" value="{{ form.q.value|default:'' }}" placeholder="Search name, username or email" style="width:280px"></div>
+  <label class="sr-only" for="id_role">Role</label><select class="select" id="id_role" name="role" style="width:140px" data-autosubmit>{% for v, l in form.fields.role.choices %}<option value="{{ v }}" {% if form.role.value == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <label class="sr-only" for="id_banned">Status</label><select class="select" id="id_banned" name="banned" style="width:140px" data-autosubmit>{% for v, l in form.fields.banned.choices %}<option value="{{ v }}" {% if form.banned.value == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <button class="btn btn-secondary" type="submit">Search</button>
+</form>
+
+{% if users %}
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Banned</th><th class="num">Assets</th><th>Joined</th></tr></thead>
+  <tbody>{% for u in users %}
+    <tr {% if not u.is_active %}style="background:rgba(251,113,133,.04)"{% endif %}>
+      <td><a class="row" style="gap:12px" href="{{ u.get_absolute_url }}"><span class="avatar" style="width:34px;height:34px;{% if not u.is_active %}opacity:.5;filter:grayscale(1){% endif %}"><img src="{{ u.avatar_url }}" alt="" width="34" height="34"></span><span><b style="font-weight:500">{{ u.display_name }}</b>{% if u == user %} <span class="badge badge-primary" style="font-size:10px">You</span>{% endif %}<br><span class="font-mono subtle" style="font-size:12px">@{{ u.username }}</span></span></a></td>
+      <td class="muted">{{ u.email }}</td>
+      <td><form method="post" action="{% url 'dashboard:admin_role' u.pk %}" class="row" style="gap:6px" data-confirm="Change @{{ u.username }}’s role? Admins can moderate every user and asset; buyers lose access to the Creator Studio." data-confirm-title="Change role?" data-confirm-label="Change role">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <label class="sr-only" for="role-{{ u.pk }}">Role for @{{ u.username }}</label><select class="select" id="role-{{ u.pk }}" name="role" style="height:32px;width:116px;font-size:12px" {% if u == user %}disabled{% endif %}>{% for v, l in roles %}<option value="{{ v }}" {% if u.role == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+        {% if u != user %}<button class="btn btn-ghost btn-sm" type="submit">Set</button>{% endif %}</form></td>
+      <td>{% if u == user %}<span class="subtle" title="You can’t ban yourself">–</span>{% else %}
+        <form method="post" action="{% url 'dashboard:admin_ban' u.pk %}" {% if u.is_active %}data-confirm="This signs @{{ u.username }} out everywhere and blocks future sign-ins. Their published assets stay listed and buyers keep what they bought." data-confirm-title="Ban @{{ u.username }}?" data-confirm-label="Ban and sign out"{% endif %}>{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="ban" value="{% if u.is_active %}1{% else %}0{% endif %}">
+          <button type="submit" class="toggle" role="switch" aria-checked="{% if u.is_active %}false{% else %}true{% endif %}" aria-label="{% if u.is_active %}Ban{% else %}Unban{% endif %} @{{ u.username }}"><span class="track"></span></button></form>{% endif %}</td>
+      <td class="num">{{ u.n_assets }}</td>
+      <td class="muted" style="white-space:nowrap;font-size:12px">{{ u.date_joined|date:"j M Y" }}</td>
+    </tr>{% endfor %}</tbody>
+</table></div>
+{% include 'partials/pagination.html' %}
+{% else %}{% include 'partials/empty_state.html' with small=True art='search' title='No users match' text='Try a different search or filter.' %}{% endif %}
+{% endblock %}

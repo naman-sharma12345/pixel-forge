@@ -1,0 +1,119 @@
+<header class="nav" id="nav">
+  <div class="container nav__inner">
+    <a href="{% url 'core:home' %}" class="logo" aria-label="Pixel Forge home">
+      {% include 'partials/logo.html' %}
+      <span class="logo__word"><span class="text-gradient">PIXEL</span> FORGE</span>
+    </a>
+
+    <nav class="nav__links" aria-label="Primary">
+      <a class="nav__link{% if nav_active == 'explore' %} is-active{% endif %}" href="{% url 'catalog:explore' %}" {% if nav_active == 'explore' %}aria-current="page"{% endif %}>Explore</a>
+      <a class="nav__link{% if nav_active == 'sfx' %} is-active{% endif %}" href="{% url 'catalog:explore' %}?category=sfx">Sound Effects</a>
+      <a class="nav__link{% if nav_active == 'music' %} is-active{% endif %}" href="{% url 'catalog:explore' %}?category=music">Music</a>
+      <a class="nav__link{% if nav_active == 'free' %} is-active{% endif %}" href="{% url 'catalog:explore' %}?free=1">Freebies</a>
+    </nav>
+
+    <div class="nav__right">
+      <button type="button" class="nav__search" data-palette-open aria-label="Search assets (Ctrl K)">
+        <i data-lucide="search"></i><span>Search assets…</span><kbd class="kbd">Ctrl K</kbd>
+      </button>
+      <button type="button" class="icon-btn nav__search-mobile" data-palette-open aria-label="Search assets"><i data-lucide="search"></i></button>
+
+      <a href="{% url 'commerce:cart' %}" class="icon-btn" aria-label="Cart, {{ cart_count }} item{{ cart_count|pluralize }}">
+        <i data-lucide="shopping-cart"></i>
+        <span class="cart-badge" id="cart-badge" {% if not cart_count %}hidden{% endif %}>{{ cart_count }}</span>
+      </a>
+
+      {% if user.is_authenticated %}
+      <div class="menu" data-menu>
+        <button type="button" class="icon-btn" style="width:auto;margin-left:4px" data-menu-toggle aria-haspopup="menu" aria-expanded="false" aria-label="Account menu">
+          <span class="avatar" style="width:32px;height:32px"><img src="{{ user.avatar_url }}" alt="" width="32" height="32"></span>
+        </button>
+        <div class="menu__panel" role="menu">
+          <div style="display:flex;gap:12px;align-items:center;padding:10px">
+            <span class="avatar" style="width:36px;height:36px"><img src="{{ user.avatar_url }}" alt="" width="36" height="36"></span>
+            <div style="min-width:0"><p class="truncate" style="font-weight:600;font-size:14px">{{ user.display_name }}</p><p class="truncate font-mono subtle" style="font-size:12px">@{{ user.username }}</p></div>
+          </div>
+          <div class="menu__sep"></div>
+          <a class="menu__item" role="menuitem" href="{% url 'commerce:library' %}"><i data-lucide="library"></i> Library</a>
+          <a class="menu__item" role="menuitem" href="{% url 'accounts:wishlist' %}"><i data-lucide="heart"></i> Wishlist</a>
+          {% if user.is_creator %}<a class="menu__item" role="menuitem" href="{% url 'dashboard:studio' %}"><i data-lucide="store"></i> Creator Studio</a>{% endif %}
+          {% if user.is_admin_role %}<a class="menu__item" role="menuitem" href="{% url 'dashboard:admin' %}"><i data-lucide="shield"></i> Admin panel</a>{% endif %}
+          {% if user.is_staff %}<a class="menu__item" role="menuitem" href="{% url 'admin:index' %}"><i data-lucide="database"></i> Django Admin</a>{% endif %}
+          <a class="menu__item" role="menuitem" href="{% url 'accounts:settings' %}"><i data-lucide="settings"></i> Settings</a>
+          <div class="menu__sep"></div>
+          <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
+            <button type="submit" class="menu__item danger" role="menuitem"><i data-lucide="log-out"></i> Log out</button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <a class="nav__login" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}">Log in</a>
+      {% endif %}
+
+      {% if not user.is_authenticated %}
+        <a class="pixel-btn pixel-btn--sm nav__sell" href="{% url 'accounts:register' %}?intent=sell"><span>Sell assets</span></a>
+      {% elif user.role == 'buyer' %}
+        <button type="button" class="pixel-btn pixel-btn--sm nav__sell" data-open="become-creator"><span>Sell assets</span></button>
+      {% else %}
+        <a class="btn btn-secondary btn-sm nav__sell" href="{% url 'dashboard:studio' %}"><i data-lucide="store"></i> Studio</a>
+      {% endif %}
+
+      <button type="button" class="icon-btn nav__burger" data-open="mobile-nav" aria-label="Open menu"><i data-lucide="menu"></i></button>
+    </div>
+  </div>
+</header>
+
+{# mobile navigation drawer #}
+<div class="drawer-wrap" id="mobile-nav" role="dialog" aria-modal="true" aria-label="Menu" data-modal>
+  <div class="overlay__backdrop" data-close></div>
+  <div class="drawer drawer--left">
+    <div class="drawer-head"><span class="logo"><span class="logo__word"><span class="text-gradient">PIXEL</span> FORGE</span></span><button type="button" class="icon-btn" data-close aria-label="Close menu"><i data-lucide="x"></i></button></div>
+    <div class="drawer-body stack" style="--gap:20px">
+      {% if user.is_authenticated %}
+      <div class="card" style="display:flex;gap:12px;align-items:center;padding:12px"><span class="avatar" style="width:44px;height:44px"><img src="{{ user.avatar_url }}" alt="" width="44" height="44"></span><div style="min-width:0"><p class="truncate" style="font-weight:600">{{ user.display_name }}</p><p class="truncate font-mono subtle" style="font-size:12px">@{{ user.username }} · {{ user.role }}</p></div></div>
+      {% else %}
+      <div class="grid" style="grid-template-columns:1fr 1fr;--gap:8px"><a class="btn btn-secondary" href="{% url 'accounts:login' %}">Log in</a><a class="btn btn-primary" href="{% url 'accounts:register' %}">Sign up</a></div>
+      {% endif %}
+      <button type="button" class="nav__search" style="display:flex;width:100%;height:44px" data-palette-open><i data-lucide="search"></i><span>Search assets…</span></button>
+      <nav aria-label="Browse" class="stack" style="--gap:2px">
+        <p class="font-pixel subtle" style="font-size:8px;padding:0 12px 8px">Browse</p>
+        <a class="pill{% if nav_active == 'explore' %} is-active{% endif %}" href="{% url 'catalog:explore' %}"><i data-lucide="compass"></i> Explore</a>
+        <a class="pill{% if nav_active == 'sfx' %} is-active{% endif %}" href="{% url 'catalog:explore' %}?category=sfx"><i data-lucide="audio-lines"></i> Sound Effects</a>
+        <a class="pill{% if nav_active == 'music' %} is-active{% endif %}" href="{% url 'catalog:explore' %}?category=music"><i data-lucide="music"></i> Music</a>
+        <a class="pill{% if nav_active == 'free' %} is-active{% endif %}" href="{% url 'catalog:explore' %}?free=1"><i data-lucide="gift"></i> Freebies</a>
+      </nav>
+      {% if user.is_authenticated %}
+      <nav aria-label="Account" class="stack" style="--gap:2px">
+        <p class="font-pixel subtle" style="font-size:8px;padding:0 12px 8px">You</p>
+        <a class="pill" href="{% url 'commerce:library' %}"><i data-lucide="library"></i> Library</a>
+        <a class="pill" href="{% url 'accounts:wishlist' %}"><i data-lucide="heart"></i> Wishlist</a>
+        {% if user.is_creator %}<a class="pill" href="{% url 'dashboard:studio' %}"><i data-lucide="store"></i> Creator Studio</a>{% endif %}
+        {% if user.is_admin_role %}<a class="pill" href="{% url 'dashboard:admin' %}"><i data-lucide="shield"></i> Admin panel</a>{% endif %}
+        <a class="pill" href="{% url 'accounts:settings' %}"><i data-lucide="settings"></i> Settings</a>
+        <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="pill text-danger" type="submit" style="width:100%"><i data-lucide="log-out"></i> Log out</button></form>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if user.is_authenticated and user.role == 'buyer' %}
+<div class="overlay" id="become-creator" role="dialog" aria-modal="true" aria-labelledby="bc-title" data-modal>
+  <div class="overlay__backdrop" data-close></div>
+  <div class="modal">
+    <button type="button" class="icon-btn modal-close" data-close aria-label="Close"><i data-lucide="x"></i></button>
+    <h2 id="bc-title">Become a creator</h2>
+    <p class="muted" style="margin-top:8px;font-size:14px">Unlock the Creator Studio and start selling to indie developers today.</p>
+    <ul class="checks" style="margin-top:20px">
+      <li><i data-lucide="check"></i> Publish sprites, tilesets, audio and more</li>
+      <li><i data-lucide="check"></i> Keep {{ CREATOR_SHARE }}% of every sale, paid in rupees</li>
+      <li><i data-lucide="check"></i> Live sales and download analytics</li>
+      <li><i data-lucide="check"></i> Your own public storefront</li>
+    </ul>
+    <form method="post" action="{% url 'accounts:become_creator' %}" class="modal-actions">{% csrf_token %}
+      <button type="button" class="btn btn-ghost" data-close>Maybe later</button>
+      <button type="submit" class="pixel-btn"><span>Open my studio</span></button>
+    </form>
+  </div>
+</div>
+{% endif %}

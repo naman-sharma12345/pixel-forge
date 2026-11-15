@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load pf %}
+{% block title %}Wishlist{% endblock %}
+{% block description %}Assets you bookmarked for later.{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:32px">
+  <header class="page-head"><div><p class="eyebrow" style="color:var(--pink)">Saved for later</p><h1 class="page-title" style="margin-top:8px">Wishlist</h1>
+    <p class="page-sub"><span class="font-mono" style="color:var(--text)">{{ assets|length }}</span> asset{{ assets|length|pluralize }}{% if total %} · worth <span class="font-mono" style="color:var(--text)">{{ total|inr }}</span>{% endif %}</p></div></header>
+  {% if assets %}
+    <div class="asset-grid wide">{% for asset in assets %}
+      {% include 'partials/asset_card.html' %}
+    {% endfor %}</div>
+  {% else %}
+    {% include 'partials/empty_state.html' with art='heart' title='Nothing saved yet' text='Tap the heart on any asset to keep it here. Handy for comparing packs before you buy.' action_url='/explore/' action_label='Explore assets' action2_url='/explore/?sort=popular' action2_label="See what's trending" %}
+  {% endif %}
+</div>
+{% endblock %}

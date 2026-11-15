@@ -1,0 +1,8 @@
+{# usage: {% include 'partials/field.html' with field=form.title counter=80 %} #}
+<div class="field{% if field.errors %} has-error{% endif %}">
+  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="text-danger" aria-hidden="true"> *</span>{% endif %}</label>
+  {{ field }}
+  {% if field.errors %}<ul class="errorlist" role="alert">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  {% elif field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+  {% if counter %}<span class="counter" data-count-for="{{ field.id_for_label }}"></span>{% endif %}
+</div>

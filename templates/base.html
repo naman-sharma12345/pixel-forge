@@ -1,0 +1,49 @@
+{% load static pf %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Game assets for indie devs{% endblock %} — Pixel Forge</title>
+  <meta name="description" content="{% block description %}Buy and sell sprites, tilesets, sound effects, music and more. Preview in your browser, priced in rupees.{% endblock %}">
+  <meta name="theme-color" content="#08080D">
+  {% block meta %}
+  <meta property="og:site_name" content="Pixel Forge">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Pixel Forge: game assets for indie devs">
+  <meta property="og:description" content="Sprites, tilesets, sound effects and music from indie creators.">
+  <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/og.png' %}">
+  {% endblock %}
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/logo.svg' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/pixelforge.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body{% block body_attrs %}{% endblock %}>
+  <a class="skip-link" href="#main">Skip to content</a>
+  {% include 'partials/navbar.html' %}
+  <div id="offline-banner" class="offline" role="status" hidden>You're offline. Some things may not work until you reconnect.</div>
+
+  <main id="main" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% include 'partials/footer.html' %}
+  {% include 'partials/player.html' %}
+  {% include 'partials/palette.html' %}
+
+  <div class="toasts" id="toasts" role="region" aria-label="Notifications" aria-live="polite"></div>
+  {# server messages become toasts; the list is also visible without JavaScript #}
+  <ul id="django-messages" class="container" {% if not messages %}hidden{% endif %}>
+    {% for message in messages %}<li data-level="{{ message.tags }}" class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</li>{% endfor %}
+  </ul>
+
+  <script src="https://unpkg.com/lucide@0.451.0/dist/umd/lucide.min.js"></script>
+  <script src="{% static 'js/app.js' %}"></script>
+  <script src="{% static 'js/player.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

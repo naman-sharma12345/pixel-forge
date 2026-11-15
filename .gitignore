@@ -6,3 +6,10 @@ dist/
 coverage/
 .DS_Store
 server/uploads/
+.venv/
+__pycache__/
+*.pyc
+db.sqlite3
+media/
+private_files/
+staticfiles/

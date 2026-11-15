@@ -1,0 +1,19 @@
+{# Global bottom audio player. player.js keeps a single <audio>, so only one sound plays at a time. #}
+<div class="player" id="player" role="region" aria-label="Audio player">
+  <img class="player__cover" id="player-cover" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="">
+  <div class="player__info">
+    <p class="player__title truncate" id="player-title">Nothing playing</p>
+    <p class="player__sub truncate" id="player-sub"></p>
+  </div>
+  <button type="button" class="player__play" id="player-toggle" aria-label="Play">
+    <i data-lucide="play" class="i-play"></i><i data-lucide="pause" class="i-pause" hidden></i>
+  </button>
+  <div class="player__bar">
+    <span id="player-time">0:00</span>
+    <input class="range" id="player-seek" type="range" min="0" max="1000" value="0" aria-label="Seek">
+    <span id="player-dur">0:00</span>
+  </div>
+  <label class="player__vol"><i data-lucide="volume-2" style="width:16px;height:16px"></i><span class="sr-only">Volume</span>
+    <input class="range" id="player-vol" type="range" min="0" max="100" value="80"></label>
+  <button type="button" class="icon-btn" id="player-close" aria-label="Close player"><i data-lucide="x"></i></button>
+</div>

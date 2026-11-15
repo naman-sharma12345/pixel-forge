@@ -1,0 +1,39 @@
+{% load static %}
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div>
+        <a href="{% url 'core:home' %}" class="logo">{% include 'partials/logo.html' %}<span class="logo__word"><span class="text-gradient">PIXEL</span> FORGE</span></a>
+        <p class="muted" style="max-width:320px;margin-top:16px;font-size:14px">The marketplace for indie game assets. Sprites, sfx, music and UI, forged by creators, shipped by devs.</p>
+        <form class="news" data-newsletter>
+          <label class="sr-only" for="news-email">Email for newsletter</label>
+          <input class="input" id="news-email" type="email" placeholder="you@studio.dev" required>
+          <button class="btn btn-primary btn-sm" type="submit">Join</button>
+        </form>
+      </div>
+      <div><h3>Marketplace</h3><ul>
+        <li><a href="{% url 'catalog:explore' %}">Explore</a></li>
+        <li><a href="{% url 'catalog:explore' %}?category=sfx">Sound Effects</a></li>
+        <li><a href="{% url 'catalog:explore' %}?category=music">Music</a></li>
+        <li><a href="{% url 'catalog:explore' %}?free=1">Freebies</a></li></ul></div>
+      <div><h3>Creators</h3><ul>
+        <li><a href="{% url 'accounts:register' %}?intent=sell">Sell assets</a></li>
+        <li><a href="{% url 'dashboard:studio' %}">Creator Studio</a></li>
+        <li><a href="{% url 'dashboard:studio_sales' %}">Sales &amp; payouts</a></li>
+        <li><a href="{% url 'catalog:studio_new' %}">Upload an asset</a></li></ul></div>
+      <div><h3>Account</h3><ul>
+        <li><a href="{% url 'commerce:library' %}">My Library</a></li>
+        <li><a href="{% url 'accounts:wishlist' %}">Wishlist</a></li>
+        <li><a href="{% url 'accounts:settings' %}?tab=orders">Orders</a></li>
+        <li><a href="{% url 'accounts:settings' %}">Settings</a></li></ul></div>
+      <div><h3>Project</h3><ul>
+        <li><a href="{% url 'core:home' %}">About</a></li>
+        <li><a href="{% url 'admin:index' %}">Django Admin</a></li>
+        <li><span class="subtle" style="font-size:14px">Lab demo · payments simulated</span></li></ul></div>
+    </div>
+    <div class="footer__bottom">
+      <p>© {% now "Y" %} Pixel Forge. A student-built Django demo. No real money is ever charged.</p>
+      <div class="row"><span class="campfire" data-campfire style="background:url('{% static 'img/campfire.png' %}') 0 0/400% 100%" role="img" aria-label="Animated pixel campfire"></span> made with pixels &amp; caffeine</div>
+    </div>
+  </div>
+</footer>

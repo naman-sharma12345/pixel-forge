@@ -1,0 +1,17 @@
+{# The Explore results block. Rendered inside explore.html and returned alone for AJAX requests. #}
+{% load pf %}
+<p class="muted" style="font-size:14px;margin-bottom:12px" data-total="{{ total }}">
+  Showing <span class="font-mono" style="color:var(--text);font-weight:600">{{ total|num }}</span> result{{ total|pluralize }}{% if data.q %} for <span style="color:var(--text)">“{{ data.q }}”</span>{% endif %}
+</p>
+{% if chips %}
+<div class="active-chips">
+  {% for label, url in chips %}<a href="{{ url }}" aria-label="Remove filter {{ label }}">{{ label }} <i data-lucide="x"></i></a>{% endfor %}
+  <a href="{% url 'catalog:explore' %}" style="border-color:transparent;background:none;color:var(--muted)">Clear all</a>
+</div>
+{% endif %}
+{% if assets %}
+  <div class="asset-grid">{% for asset in assets %}{% include 'partials/asset_card.html' %}{% endfor %}</div>
+  {% include 'partials/pagination.html' %}
+{% else %}
+  {% include 'partials/empty_state.html' with art='search' title='No assets match these filters' text='Try a broader search, a different category, or remove a filter or two.' action_url='/explore/' action_label='Clear filters' action2_url='/explore/?free=1' action2_label='Browse freebies' %}
+{% endif %}

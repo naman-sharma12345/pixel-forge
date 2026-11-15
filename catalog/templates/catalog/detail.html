@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static pf %}
+{% block title %}{{ asset.title }}{% endblock %}
+{% block description %}{{ asset.description|truncatechars:160 }}{% endblock %}
+{% block meta %}
+  <meta property="og:site_name" content="Pixel Forge">
+  <meta property="og:type" content="product">
+  <meta property="og:title" content="{{ asset.title }}">
+  <meta property="og:description" content="{{ asset.description|truncatechars:200 }}">
+  <meta property="og:image" content="{{ og_image }}">
+  <meta name="twitter:card" content="summary_large_image">
+{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:20px">
+  <nav aria-label="Breadcrumb" class="breadcrumb">
+    <a href="{% url 'catalog:explore' %}">Explore</a><i data-lucide="chevron-right"></i>
+    <a href="{% url 'catalog:explore' %}?category={{ asset.category.key }}">{{ asset.category.name }}</a><i data-lucide="chevron-right"></i>
+    <span class="truncate" aria-current="page" style="color:var(--text)">{{ asset.title }}</span>
+  </nav>
+
+  {% if is_mine and asset.status != 'published' %}
+  <div class="alert {% if asset.status == 'rejected' %}alert-error{% else %}alert-warning{% endif %}" role="status" style="margin-bottom:24px">
+    <i data-lucide="{% if asset.status == 'rejected' %}octagon-alert{% else %}eye-off{% endif %}"></i>
+    <div class="grow"><b>{% if asset.status == 'rejected' %}This asset was rejected by moderation{% else %}This asset is archived{% endif %}</b> and is hidden from buyers.{% if asset.rejection_reason %}<p class="muted" style="margin-top:4px">Reason: {{ asset.rejection_reason }}</p>{% endif %}</div>
+    <a href="{% url 'catalog:studio_edit' asset.pk %}" style="text-decoration:underline;font-weight:500">Fix in Studio</a>
+  </div>
+  {% endif %}
+
+  <div class="detail">
+    <div style="min-width:0">
+      {# ---------- media viewer ---------- #}
+      {% if asset.media_kind == 'audio' %}
+      <section class="audio-viewer" aria-label="Audio preview" id="audio-viewer" data-loop="{{ asset.loopable|yesno:'1,0' }}">
+        <div class="audio-viewer__head" style="--cover:url('{{ asset.thumbnail.url }}')">
+          <img src="{{ asset.thumbnail.url }}" alt="" width="72" height="72">
+          <div style="min-width:0"><p class="eyebrow" id="av-state">Audio preview</p><p class="truncate" style="font-family:var(--font-display);font-size:1.15rem;font-weight:600;margin-top:6px" id="av-track">Main preview</p>
+            <div class="row-wrap" style="margin-top:8px;--gap:6px">
+              {% if asset.bpm %}<span class="badge font-mono">{{ asset.bpm }} BPM</span>{% endif %}{% if asset.duration_sec %}<span class="badge font-mono">{{ asset.duration_sec|duration }}</span>{% endif %}{% if asset.loopable %}<span class="badge font-mono">Seamless loop</span>{% endif %}</div></div>
+        </div>
+        <div class="wave-box"><div id="waveform" aria-label="Waveform. Click to seek."></div>
+          <div class="row between font-mono subtle" style="font-size:11px;margin-top:8px"><span id="av-cur" style="color:var(--text)">0:00</span><span id="av-dur">0:00</span></div></div>
+        <div class="transport">
+          <button type="button" class="big-play" id="av-play" aria-label="Play preview"><i data-lucide="play" class="i-play"></i><i data-lucide="pause" class="i-pause" hidden></i></button>
+          <button type="button" class="btn btn-secondary btn-sm" id="av-loop" aria-pressed="{{ asset.loopable|yesno:'true,false' }}"><i data-lucide="repeat"></i> Loop <span id="av-loop-state">{{ asset.loopable|yesno:'on,off' }}</span></button>
+          <label class="row" style="margin-left:auto;gap:8px;min-width:150px"><i data-lucide="volume-2" style="width:16px;height:16px;color:var(--muted)"></i><span class="sr-only">Volume</span><input class="range" id="av-vol" type="range" min="0" max="100" value="80"></label>
+        </div>
+        {% if audio_previews|length > 1 %}
+        <ol class="tracklist" style="border-top:1px solid var(--border);padding:8px">
+          {% for p in audio_previews %}<li><button type="button" data-wave-src="{{ p.file.url }}" data-name="{% if forloop.first %}Main preview{% else %}Alternate take {{ forloop.counter }}{% endif %}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}"><span class="font-mono subtle" style="width:20px">{{ forloop.counter|stringformat:"02d" }}</span><span class="grow">{% if forloop.first %}Main preview{% else %}Alternate take {{ forloop.counter }}{% endif %}</span></button></li>{% endfor %}
+        </ol>
+        {% endif %}
+        {% if audio_previews %}<input type="hidden" id="av-first" value="{{ audio_previews.0.file.url }}">{% endif %}
+      </section>
+      {% else %}
+      <section class="viewer" aria-label="Image preview" id="viewer" data-frames="{{ frames }}">
+        <div class="viewer__bar">
+          <div class="row seg" role="radiogroup" aria-label="Stage background" style="display:flex;gap:2px;padding:2px">
+            <button type="button" class="swatch checker" data-bg="" aria-pressed="true" aria-label="Checkerboard background" title="Checkerboard"></button>
+            <button type="button" class="swatch" style="background:#05050a" data-bg="bg-dark" aria-pressed="false" aria-label="Dark background" title="Dark"></button>
+            <button type="button" class="swatch checker-light" data-bg="bg-light" aria-pressed="false" aria-label="Light background" title="Light"></button>
+          </div>
+          {% if frames %}
+          <div class="row" style="gap:2px;padding:2px;border:1px solid var(--border);border-radius:var(--r-control);background:var(--surface-2)" role="group" aria-label="Sprite sheet view">
+            <button type="button" class="tool" id="mode-anim" aria-pressed="true">Animate</button><button type="button" class="tool" id="mode-sheet" aria-pressed="false">Full sheet</button></div>
+          {% endif %}
+          <div class="row" style="margin-left:auto;gap:2px">
+            <button type="button" class="tool" id="zoom-out" aria-label="Zoom out" disabled><i data-lucide="zoom-out"></i></button>
+            <span class="font-mono muted" id="zoom-label" style="width:48px;text-align:center;font-size:12px">100%</span>
+            <button type="button" class="tool" id="zoom-in" aria-label="Zoom in"><i data-lucide="zoom-in"></i></button>
+            <button type="button" class="tool" id="zoom-fit" aria-label="Fit to screen" disabled><i data-lucide="maximize-2"></i></button>
+          </div>
+        </div>
+        <div class="viewer__stage checker" id="stage" tabindex="0" role="img" aria-label="{{ asset.title }} preview. Scroll or use plus and minus to zoom.">
+          <div class="viewer__inner" id="stage-inner">
+            <img id="stage-img" src="{{ images.0 }}" alt="{{ asset.title }}" draggable="false">
+            {% if frames %}<div class="sprite-anim" id="sprite-anim" hidden style="background-image:url('{{ images.0 }}');background-size:{{ frames }}00% 100%"></div>{% endif %}
+          </div>
+        </div>
+        {% if frames %}
+        <div class="row-wrap" id="anim-controls" style="gap:16px;padding:10px 12px;border-top:1px solid var(--border)">
+          <button type="button" class="btn btn-primary btn-sm" id="anim-toggle" aria-pressed="true"><i data-lucide="pause"></i> <span>Pause</span></button>
+          <span class="font-mono muted" style="font-size:12px">{{ frames }} frames{% if asset.resolution %} · {{ asset.resolution }}{% endif %}</span>
+          <label class="row grow" style="min-width:180px;gap:12px;font-size:12px;color:var(--muted)">FPS<input class="range" id="anim-fps" type="range" min="4" max="24" value="12"><span class="font-mono" id="anim-fps-label" style="color:var(--text);width:24px;text-align:right">12</span></label>
+        </div>
+        {% endif %}
+        {% if images|length > 1 %}
+        <div class="viewer__thumbs">{% for url in images %}<button type="button" data-src="{{ url }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}" aria-label="{% if forloop.first and frames %}Sprite sheet{% else %}Preview {{ forloop.counter }}{% endif %}"><img src="{{ url }}" alt="" loading="lazy"></button>{% endfor %}</div>
+        {% endif %}
+      </section>
+      {% endif %}
+      <p class="subtle" style="margin:12px 4px 0;font-size:12px">Published {{ asset.created_at|date:"j M Y" }} · Updated {{ asset.updated_at|date:"j M Y" }}</p>
+    </div>
+
+    {# ---------- purchase panel ---------- #}
+    <div>
+      <div style="position:sticky;top:84px" class="stack" id="purchase-panel" style="--gap:12px">
+        <div class="buy">
+          <div class="row-wrap" style="gap:8px">
+            <a href="{% url 'catalog:explore' %}?category={{ asset.category.key }}" class="badge badge-primary" style="padding:5px 8px"><i data-lucide="{{ asset.category.icon }}" style="width:14px;height:14px"></i> {{ asset.category.name }}</a>
+            {% if asset.is_featured %}<span class="font-pixel text-warning" style="font-size:8px">★ FEATURED</span>{% endif %}
+          </div>
+          <h1 style="font-size:1.75rem;font-weight:700;margin-top:12px;line-height:1.15">{{ asset.title }}</h1>
+          <div class="row" style="gap:12px;margin-top:16px">
+            <a href="{% url 'accounts:profile' asset.creator.username %}"><span class="avatar" style="width:40px;height:40px"><img src="{{ asset.creator.avatar_url }}" alt="" width="40" height="40"></span></a>
+            <div class="grow"><a class="truncate" style="display:block;font-weight:600;font-size:14px" href="{% url 'accounts:profile' asset.creator.username %}">{{ asset.creator.display_name }}</a><span class="font-mono subtle" style="font-size:12px">@{{ asset.creator.username }}</span></div>
+            <a class="btn btn-secondary btn-sm" href="{% url 'accounts:profile' asset.creator.username %}">View profile</a>
+          </div>
+          <a href="?tab=reviews#tabs" class="row" style="gap:8px;margin-top:16px;font-size:14px" aria-label="Rated {{ summary.avg|floatformat:1 }} out of 5 from {{ summary.count }} reviews. Show reviews">
+            <span class="stars" aria-hidden="true">{% for i in "12345" %}<span class="{% if forloop.counter <= summary.avg|round_int %}on{% endif %}">{{ forloop.counter|star:summary.avg }}</span>{% endfor %}</span>
+            {% if summary.count %}<span class="muted"><b class="font-mono" style="color:var(--text)">{{ summary.avg|floatformat:1 }}</b> · {{ summary.count }} review{{ summary.count|pluralize }}</span>{% else %}<span class="muted">No reviews yet</span>{% endif %}
+            <span class="subtle">·</span><span class="font-mono subtle" style="font-size:12px">{{ asset.n_sales }} sold</span>
+          </a>
+          <hr style="margin:20px 0">
+          <div class="buy__price">{% if asset.is_free %}<span class="price-free" style="font-size:16px">FREE</span>{% else %}{{ asset.price|inr }}{% endif %}</div>
+          <p class="subtle" style="font-size:12px;margin-top:4px">{% if asset.is_free %}Free forever · no card needed{% else %}One-time payment · lifetime updates{% endif %}</p>
+
+          <div class="stack" style="--gap:10px;margin-top:20px">
+          {% if is_mine %}
+            <a class="pixel-btn pixel-btn--lg pixel-btn--accent pixel-btn--block" href="{% url 'catalog:studio_edit' asset.pk %}"><span><i data-lucide="pencil"></i> Edit in Studio</span></a>
+          {% elif owned %}
+            <a class="pixel-btn pixel-btn--lg pixel-btn--success pixel-btn--block" href="{% url 'commerce:download' asset.slug %}"><span><i data-lucide="download"></i> Download</span></a>
+            <p class="row text-success" style="justify-content:center;gap:6px;font-size:12px"><i data-lucide="check" style="width:14px;height:14px"></i> In your library · <a href="{% url 'commerce:library' %}" style="text-decoration:underline">Open library</a></p>
+          {% elif not user.is_authenticated %}
+            <a class="pixel-btn pixel-btn--lg pixel-btn--block {% if asset.is_free %}pixel-btn--success{% endif %}" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}"><span>{% if asset.is_free %}Log in to get it free{% else %}Log in to buy{% endif %}</span></a>
+          {% elif asset.is_free %}
+            <form method="post" action="{% url 'commerce:claim' asset.slug %}">{% csrf_token %}<button type="submit" class="pixel-btn pixel-btn--lg pixel-btn--success pixel-btn--block"><span>Get it free</span></button></form>
+          {% else %}
+            <form method="post" action="{% url 'commerce:checkout' %}">{% csrf_token %}<input type="hidden" name="asset" value="{{ asset.slug }}"><button type="submit" class="pixel-btn pixel-btn--lg pixel-btn--block"><span><i data-lucide="zap"></i> Buy now</span></button></form>
+            {% if in_cart %}
+              <a class="btn btn-secondary btn-lg btn-block text-success" href="{% url 'commerce:cart' %}"><i data-lucide="check"></i> In cart · View cart</a>
+            {% else %}
+              <form method="post" action="{% url 'commerce:cart_add' asset.slug %}" data-ajax="cart" data-cart-swap="btn btn-secondary btn-lg btn-block text-success">{% csrf_token %}<button type="submit" class="btn btn-secondary btn-lg btn-block"><i data-lucide="shopping-cart"></i> Add to cart</button></form>
+            {% endif %}
+          {% endif %}
+          </div>
+
+          <div class="grid" style="grid-template-columns:1fr 1fr;--gap:8px;margin-top:12px">
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'accounts:wishlist_toggle' asset.slug %}" data-ajax="wishlist" style="display:contents">{% csrf_token %}
+              <button type="submit" class="btn btn-secondary heart-btn" style="width:100%"><span class="heart{% if in_wishlist %} is-on{% endif %}" style="width:auto;height:auto;border:0;background:none;backdrop-filter:none;display:inline-flex" aria-pressed="{{ in_wishlist|yesno:'true,false' }}"><i data-lucide="heart"></i></span> Wishlist <span class="font-mono subtle" style="font-size:12px">{{ asset.n_wishlists }}</span></button>
+            </form>
+            {% else %}<a class="btn btn-secondary" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}"><i data-lucide="heart"></i> Wishlist</a>{% endif %}
+            <button type="button" class="btn btn-secondary" data-copy-link><i data-lucide="link-2"></i> Copy link</button>
+          </div>
+          {% if not owned and not is_mine %}<p class="row subtle" style="justify-content:center;gap:6px;font-size:11px;margin-top:16px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> Demo checkout · no real money is charged</p>{% endif %}
+        </div>
+
+        <div class="info-box" style="margin-top:12px"><h2><i data-lucide="shield-check" class="text-primary"></i> {{ asset.get_license_display|split:' - '|first }} license</h2>
+          <p class="subtle" style="font-size:12px;margin:-6px 0 12px">{{ asset.get_license_display|split:' - '|last }}</p>
+          <ul class="checks">
+            {% if asset.license == 'cc0' %}<li><i data-lucide="check"></i> Use it in any project, commercial or not.</li><li><i data-lucide="check"></i> No credit required, ever.</li><li><i data-lucide="check"></i> You can modify and redistribute it freely.</li>
+            {% elif asset.license == 'standard' %}<li><i data-lucide="check"></i> Use it in games and apps you sell or give away.</li><li><i data-lucide="check"></i> Do not resell or redistribute the raw files.</li><li><i data-lucide="check"></i> Credit is appreciated but not required.</li>
+            {% else %}<li><i data-lucide="check"></i> Everything in Standard, plus redistribution rights.</li><li><i data-lucide="check"></i> You may share the files inside bundles or templates.</li><li><i data-lucide="check"></i> Still cannot resell the assets as-is.</li>{% endif %}
+          </ul></div>
+
+        <div class="info-box"><h2><i data-lucide="file-archive" class="text-accent"></i> What you get</h2>
+          <dl class="spec-list" style="margin:0">
+            <div><dt>Format</dt><dd>{{ asset.file_ext|upper }}</dd></div>
+            <div><dt>Size</dt><dd>{{ asset.file_size|filesize }}</dd></div>
+            {% if asset.resolution %}<div><dt>Resolution</dt><dd>{{ asset.resolution }}</dd></div>{% endif %}
+            {% if frames %}<div><dt>Frames</dt><dd>{{ frames }}</dd></div>{% endif %}
+            {% if asset.duration_sec %}<div><dt>Duration</dt><dd>{{ asset.duration_sec|duration }}</dd></div>{% endif %}
+            {% if asset.bpm %}<div><dt>Tempo</dt><dd>{{ asset.bpm }} BPM</dd></div>{% endif %}
+            {% if asset.media_kind == 'audio' %}<div><dt>Loopable</dt><dd>{{ asset.loopable|yesno:'Yes,No' }}</dd></div>{% endif %}
+          </dl>
+          {% if asset.format_list %}<div class="row-wrap" style="margin-top:12px;gap:6px">{% for f in asset.format_list %}<span class="badge font-mono" style="text-transform:uppercase">.{{ f }}</span>{% endfor %}</div>{% endif %}
+        </div>
+        {% if asset.tag_list %}<div class="row-wrap" style="gap:6px;padding:0 4px;margin-top:12px">{% for t in asset.tag_list %}<a class="chip" href="{% url 'catalog:explore' %}?tags={{ t }}">#{{ t }}</a>{% endfor %}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- tabs ---------- #}
+  <section id="tabs" style="margin-top:56px;scroll-margin-top:80px">
+    <div class="tabs" role="tablist" aria-label="Asset details">
+      <button class="tab" role="tab" id="t-description" aria-controls="p-description" aria-selected="{% if tab == 'description' %}true{% else %}false{% endif %}">Description</button>
+      <button class="tab" role="tab" id="t-reviews" aria-controls="p-reviews" aria-selected="{% if tab == 'reviews' %}true{% else %}false{% endif %}">Reviews <span class="count">{{ summary.count }}</span></button>
+      <button class="tab" role="tab" id="t-more" aria-controls="p-more" aria-selected="{% if tab == 'more' %}true{% else %}false{% endif %}">More from {{ asset.creator.display_name }}</button>
+      <button class="tab" role="tab" id="t-related" aria-controls="p-related" aria-selected="{% if tab == 'related' %}true{% else %}false{% endif %}">Related</button>
+    </div>
+
+    <div id="p-description" role="tabpanel" aria-labelledby="t-description" style="margin-top:24px" {% if tab != 'description' %}hidden{% endif %}>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));--gap:24px">
+        <div class="card" style="padding:28px;grid-column:span 2;min-width:0"><div class="prose">{{ asset.description|urlize }}</div></div>
+        <aside class="card" style="padding:24px;align-self:start"><h3 class="font-pixel subtle" style="font-size:8px;font-weight:400">At a glance</h3>
+          <dl class="spec-list" style="margin:16px 0 0"><div><dt>Category</dt><dd>{{ asset.category.name }}</dd></div><div><dt>Downloads</dt><dd>{{ asset.downloads|num }}</dd></div><div><dt>Views</dt><dd>{{ asset.views|num }}</dd></div></dl></aside>
+      </div>
+    </div>
+
+    <div id="p-reviews" role="tabpanel" aria-labelledby="t-reviews" style="margin-top:24px" {% if tab != 'reviews' %}hidden{% endif %}>
+      <div class="stack" style="--gap:20px">
+        <div class="card" style="padding:24px"><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));--gap:24px;align-items:center">
+          <div class="card" style="padding:20px;text-align:center;background:rgba(22,22,34,.6)"><p style="font-family:var(--font-display);font-size:3rem;font-weight:700;line-height:1">{% if summary.count %}{{ summary.avg|floatformat:1 }}{% else %}–{% endif %}</p>
+            <span class="stars" style="margin-top:8px" aria-hidden="true">{% for i in "12345" %}<span class="{% if forloop.counter <= summary.avg|round_int %}on{% endif %}">{{ forloop.counter|star:summary.avg }}</span>{% endfor %}</span>
+            <p class="muted" style="font-size:12px;margin-top:6px">{{ summary.count }} review{{ summary.count|pluralize }}</p></div>
+          <div class="rating-bars stack" style="--gap:8px">{% for d in distribution %}<div class="row" style="gap:12px"><span class="font-mono muted" style="width:20px">{{ d.star }}★</span><span class="bar"><i style="width:{{ d.pct }}%"></i></span><span class="font-mono subtle" style="width:40px;text-align:right">{{ d.pct }}%</span></div>{% endfor %}</div>
+        </div></div>
+
+        {% if can_review %}
+        <form method="post" action="{% url 'catalog:review_save' asset.slug %}" class="card" style="padding:24px;border-color:rgba(139,92,246,.3);background:linear-gradient(135deg,rgba(139,92,246,.1),var(--surface) 60%)">{% csrf_token %}
+          <h3 style="font-size:1.1rem">{% if my_review %}Edit your review{% else %}You own this. How is it?{% endif %}</h3>
+          <p class="muted" style="font-size:14px;margin:4px 0 16px">Your review helps other devs decide, and helps the creator improve.</p>
+          <fieldset style="border:0;padding:0;margin:0"><legend class="sr-only">Your rating</legend>
+            <div class="star-input">{% for v in "54321" %}<input type="radio" name="rating" id="star{{ v }}" value="{{ v }}" {% if my_review.rating|stringformat:"s" == v %}checked{% endif %} required><label for="star{{ v }}" title="{{ v }} star{{ v|pluralize }}"><span class="sr-only">{{ v }} star{{ v|pluralize }}</span>{% star_svg False %}</label>{% endfor %}</div></fieldset>
+          <div class="field" style="margin-top:16px"><label for="id_comment">Comment (optional)</label><textarea class="textarea" id="id_comment" name="comment" rows="4" maxlength="1000" placeholder="What did you think?">{{ my_review.comment|default:'' }}</textarea><span class="counter" data-count-for="id_comment"></span></div>
+          <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn btn-primary" type="submit">{% if my_review %}Save changes{% else %}Post review{% endif %}</button></div>
+        </form>
+        {% elif is_mine %}<p class="muted" style="font-size:14px">Creators can’t review their own assets.</p>
+        {% elif not owned %}<p class="muted" style="font-size:14px">Only people who own this asset can review it.</p>{% endif %}
+
+        {% for r in reviews %}
+        <article class="review"><a href="{% url 'accounts:profile' r.user.username %}"><span class="avatar" style="width:36px;height:36px"><img src="{{ r.user.avatar_url }}" alt="" width="36" height="36" loading="lazy"></span></a>
+          <div class="grow"><div class="row-wrap" style="gap:8px"><b style="font-size:14px">{{ r.user.display_name }}</b><span class="subtle" style="font-size:12px">@{{ r.user.username }}</span>
+              <span class="stars" aria-label="{{ r.rating }} out of 5">{% for i in "12345" %}<span class="{% if forloop.counter <= r.rating %}on{% endif %}">{{ forloop.counter|star:r.rating }}</span>{% endfor %}</span><span class="subtle" style="margin-left:auto;font-size:12px">{{ r.created_at|timesince }} ago</span></div>
+            {% if r.comment %}<p class="muted" style="margin-top:8px;line-height:1.6;font-size:14px">{{ r.comment }}</p>{% endif %}
+            {% if r.user_id == user.id or user.is_admin_role %}<form method="post" action="{% url 'catalog:review_delete' r.pk %}" data-confirm="Delete this review? This can’t be undone." data-confirm-title="Delete review" data-confirm-label="Delete" style="margin-top:8px">{% csrf_token %}<button type="submit" class="text-danger" style="font-size:12px;display:inline-flex;gap:4px;align-items:center"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete</button></form>{% endif %}</div></article>
+        {% empty %}<p class="card muted" style="padding:32px;text-align:center;font-size:14px">No reviews yet. Be the first once you own it.</p>{% endfor %}
+      </div>
+    </div>
+
+    <div id="p-more" role="tabpanel" aria-labelledby="t-more" style="margin-top:24px" {% if tab != 'more' %}hidden{% endif %}>
+      {% if more %}<div class="asset-grid">{% for asset in more %}{% include 'partials/asset_card.html' %}{% endfor %}</div>
+      {% else %}{% include 'partials/empty_state.html' with small=True art='star' title='No other assets yet' text='Follow their profile to catch the next drop.' %}{% endif %}
+    </div>
+    <div id="p-related" role="tabpanel" aria-labelledby="t-related" style="margin-top:24px" {% if tab != 'related' %}hidden{% endif %}>
+      {% if related %}<div class="asset-grid">{% for asset in related %}{% include 'partials/asset_card.html' %}{% endfor %}</div>
+      {% else %}{% include 'partials/empty_state.html' with small=True art='search' title='Nothing related yet' text='Browse the category for similar assets.' %}{% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+{% if asset.media_kind == 'audio' %}<script src="https://unpkg.com/wavesurfer.js@7.8.6/dist/wavesurfer.min.js"></script>{% endif %}
+<script src="{% static 'js/detail.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static pf %}
+{% block title %}{% if category_obj %}{{ category_obj.name }} · Explore{% elif data.q %}“{{ data.q }}” · Explore{% else %}Explore{% endif %}{% endblock %}
+{% block description %}Browse every sprite, tileset, sound and track on Pixel Forge.{% endblock %}
+{% block content %}
+<div class="container" style="padding-top:32px">
+  <div class="explore">
+    <div class="overlay__backdrop" id="filters-backdrop" hidden style="position:fixed;z-index:64"></div>
+    <aside class="filters" id="filter-panel" aria-label="Filters">
+      <form id="filters" method="get" action="{% url 'catalog:explore' %}">
+        <div class="filter-group">
+          <label class="sr-only" for="f-q">Search assets</label>
+          <div class="input-icon"><i data-lucide="search"></i><input class="input" id="f-q" type="search" name="q" value="{{ data.q|default:'' }}" placeholder="Search assets…" autocomplete="off"></div>
+        </div>
+        <div class="filter-group" role="radiogroup" aria-label="Category">
+          <h3>Category</h3>
+          <label class="filter-opt"><input type="radio" name="category" value="" {% if not category_obj %}checked{% endif %}><i data-lucide="compass"></i> All categories</label>
+          {% for c in categories %}
+          <label class="filter-opt"><input type="radio" name="category" value="{{ c.key }}" {% if category_obj.key == c.key %}checked{% endif %}><i data-lucide="{{ c.icon }}"></i> {{ c.name }}<span class="n">{{ c.count }}</span></label>
+          {% endfor %}
+        </div>
+        <div class="filter-group">
+          <h3>Media type</h3>
+          <div class="seg" role="radiogroup" aria-label="Media type">
+            {% for v, l in form.fields.media_kind.choices %}<label><input type="radio" name="media_kind" value="{{ v }}" {% if data.media_kind|default:'' == v %}checked{% endif %}>{{ l }}</label>{% endfor %}
+          </div>
+        </div>
+        <div class="filter-group">
+          <h3>Price (₹)</h3>
+          <div class="row"><label class="sr-only" for="f-min">Minimum price</label><input class="input font-mono" id="f-min" type="number" name="min_price" min="0" max="50000" inputmode="numeric" placeholder="0" value="{{ data.min_price|default_if_none:'' }}" style="height:36px"><span class="subtle">–</span><label class="sr-only" for="f-max">Maximum price</label><input class="input font-mono" id="f-max" type="number" name="max_price" min="0" max="50000" inputmode="numeric" placeholder="5000+" value="{{ data.max_price|default_if_none:'' }}" style="height:36px"></div>
+          <div class="card" style="margin-top:12px;padding:10px 12px"><label class="switch"><input type="checkbox" name="free" value="1" {% if data.free %}checked{% endif %}><span class="track"></span> Free assets only</label></div>
+        </div>
+        <div class="filter-group" role="radiogroup" aria-label="License">
+          <h3>License</h3>
+          <label class="filter-opt"><input type="radio" name="license" value="" {% if not data.license %}checked{% endif %}> Any license</label>
+          {% for v, l in licenses %}<label class="filter-opt"><input type="radio" name="license" value="{{ v }}" {% if data.license == v %}checked{% endif %}><span>{{ l|split:' - '|first }}<small class="subtle" style="display:block;font-size:11px">{{ l|split:' - '|last }}</small></span></label>{% endfor %}
+        </div>
+        <div class="filter-group">
+          <h3>Popular tags</h3>
+          <input type="hidden" name="tags" id="f-tags" value="{{ active_tags|join:',' }}">
+          <div class="row-wrap" style="--gap:6px">
+            {% for name, count, active in tag_links %}<a class="chip{% if active %} is-active{% endif %}" data-tag="{{ name }}" href="{% qs tags=name page=None %}" aria-pressed="{{ active|yesno:'true,false' }}">#{{ name }}</a>{% endfor %}
+          </div>
+        </div>
+        <div class="row" style="gap:8px"><button class="btn btn-primary grow" type="submit">Apply filters</button><a class="btn btn-ghost" href="{% url 'catalog:explore' %}">Reset</a></div>
+      </form>
+    </aside>
+
+    <div style="min-width:0">
+      <header class="row" style="gap:16px;align-items:flex-start;margin-bottom:20px">
+        {% if category_obj %}<span class="cat-tile__icon" style="--cat:var(--primary);width:48px;height:48px;border-radius:12px;color:var(--primary);background:var(--primary-soft)"><i data-lucide="{{ category_obj.icon }}" style="width:24px;height:24px"></i></span>{% endif %}
+        <div><h1 class="page-title">{% if category_obj %}{{ category_obj.name }}{% elif data.q %}Search results{% elif data.free %}Free to grab{% else %}Explore{% endif %}</h1>
+          <p class="page-sub">{% if category_obj %}{{ category_obj.description }}{% elif data.q %}Assets matching your search across every category.{% elif data.free %}Every free asset on Pixel Forge. Claim it and it is yours to keep.{% else %}Sprites, tilesets, UI, sound effects and music from indie creators.{% endif %}</p></div>
+      </header>
+
+      <div class="toolbar">
+        <button type="button" class="btn btn-secondary btn-sm filter-toggle" data-open-filters><i data-lucide="sliders-horizontal"></i> Filters{% if chips %} <span class="badge badge-primary">{{ chips|length }}</span>{% endif %}</button>
+        <span class="muted" style="font-size:13px">Sort &amp; share</span>
+        <div class="row" style="gap:8px;margin-left:auto">
+          <a class="btn btn-ghost btn-sm" href="{% url 'catalog:explore_csv' %}{% qs page=None %}" title="Download these results as CSV"><i data-lucide="download"></i> CSV</a>
+          <label class="sr-only" for="sort-select">Sort results</label>
+          <select class="select" id="sort-select" name="sort" form="filters" style="height:36px;width:180px">
+            {% for v, l in sort_choices %}<option value="{{ v }}" {% if data.sort|default:'newest' == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div id="results" aria-live="polite">{% include 'catalog/_results.html' %}</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/explore.js' %}"></script>{% endblock %}

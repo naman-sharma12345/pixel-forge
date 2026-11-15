@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load pf %}
+{% block title %}PixelPay checkout{% endblock %}
+{% block content %}
+<div class="container container-sm" style="max-width:480px;padding-top:40px">
+  <div class="panel" style="overflow:hidden">
+    <div class="row between" style="padding:16px 20px;border-bottom:1px solid var(--border)">
+      <div class="row" style="gap:10px"><span class="font-pixel" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:var(--gradient);color:#fff;font-size:9px;box-shadow:3px 3px 0 rgba(0,0,0,.55)">P</span>
+        <div><p style="font-family:var(--font-display);font-weight:600;font-size:14px">PixelPay</p><p class="subtle row" style="gap:4px;font-size:11px"><i data-lucide="lock" style="width:10px;height:10px"></i> Secure demo checkout</p></div></div>
+      <a class="icon-btn" href="{% url 'commerce:cart' %}?cancelled=1" aria-label="Cancel payment"><i data-lucide="x"></i></a>
+    </div>
+    <div style="padding:20px">
+      {% if order.status == 'failed' %}
+      <div class="alert alert-error" role="alert" style="margin-bottom:16px"><i data-lucide="x-circle"></i><div><b>Payment failed</b><p class="muted" style="font-size:14px;margin-top:2px">Your bank declined this payment. Nothing was charged and your cart is untouched. You can try again.</p></div></div>
+      {% endif %}
+      <div class="card" style="background:rgba(22,22,34,.6)">
+        <ul>{% for i in items %}<li class="row" style="gap:12px;padding:12px;border-bottom:1px solid rgba(38,38,54,.7)">{% if i.asset %}<img class="thumb" src="{{ i.asset.thumbnail.url }}" alt="" width="36" height="36" style="width:36px;height:36px">{% endif %}<span class="grow truncate" style="font-size:14px">{{ i.title }}</span><span class="font-mono muted" style="font-size:12px">{{ i.price|inr }}</span></li>{% endfor %}</ul>
+        <div class="row between" style="padding:12px 14px"><span class="muted" style="font-size:14px">Total <span class="subtle" style="font-size:12px">· fee included</span></span><span class="font-mono" style="font-size:1.15rem;font-weight:600">{{ order.total|inr }}</span></div>
+      </div>
+      <p class="font-mono subtle" style="font-size:11px;margin-top:8px">Order {{ order.reference }}</p>
+
+      <div class="pay-card" style="margin-top:20px" aria-hidden="true">
+        <div class="row between"><span style="width:36px;height:28px;border-radius:5px;background:linear-gradient(135deg,#fde68a,#b45309)"></span><span class="font-pixel" style="font-size:9px;color:#fff">PIXELPAY</span></div>
+        <p class="font-mono" style="font-size:1.1rem;letter-spacing:.18em;color:#fff">•••• •••• •••• 4242</p>
+        <div class="row between font-mono" style="font-size:11px;text-transform:uppercase;color:#fff;opacity:.9"><span>Pixel Forge Demo</span><span>12 / 38</span></div>
+      </div>
+
+      <form method="post" action="{% url 'commerce:pay_confirm' order.reference %}" id="pay-form" class="stack" style="--gap:12px;margin-top:20px">
+        {% csrf_token %}
+        <input type="hidden" name="outcome" value="success" id="outcome">
+        {# Display-only demo fields: they have no name, so nothing about the "card" is ever sent anywhere #}
+        <div class="field"><label for="cc-number">Card number</label><input class="input font-mono" id="cc-number" value="4242 4242 4242 4242" inputmode="numeric" autocomplete="off"></div>
+        <div class="grid" style="grid-template-columns:1fr 1fr;--gap:12px"><div class="field"><label for="cc-exp">Expiry</label><input class="input font-mono" id="cc-exp" value="12 / 38" autocomplete="off"></div><div class="field"><label for="cc-cvc">CVC</label><input class="input font-mono" id="cc-cvc" value="123" autocomplete="off"></div></div>
+        <div class="field"><label for="cc-name">Name on card</label><input class="input" id="cc-name" value="PIXEL FORGE DEMO" autocomplete="off"></div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block" data-outcome="success" id="pay-btn" style="position:relative;overflow:hidden"><i data-lucide="lock"></i> <span id="pay-label">Pay {{ order.total|inr }}</span></button>
+        <button type="submit" class="btn btn-ghost btn-sm btn-block" data-outcome="failure">Simulate failure</button>
+      </form>
+      <p class="pay-demo"><i data-lucide="shield-check" style="width:14px;height:14px"></i> Demo mode - no real money is charged</p>
+    </div>
+  </div>
+</div>
+<script>
+  (function () {
+    var form = document.getElementById('pay-form'), outcome = document.getElementById('outcome'), label = document.getElementById('pay-label'), busy = false;
+    var stages = ['Contacting PixelPay…', 'Authorising card…', 'Confirming order…'];
+    form.addEventListener('click', function (e) { var b = e.target.closest('button[data-outcome]'); if (b) outcome.value = b.dataset.outcome; });
+    form.addEventListener('submit', function (e) {
+      if (busy || form.dataset.go) return;
+      e.preventDefault(); busy = true;
+      $$btns().forEach(function (b) { b.disabled = true; });
+      var i = 0; label.textContent = stages[0];
+      var t = setInterval(function () { i = Math.min(i + 1, 2); label.textContent = stages[i]; }, 450);
+      setTimeout(function () { clearInterval(t); form.dataset.go = '1'; form.submit(); }, 1200); // 1.2 s processing animation
+    });
+    function $$btns() { return Array.prototype.slice.call(form.querySelectorAll('button')); }
+  })();
+</script>
+{% endblock %}

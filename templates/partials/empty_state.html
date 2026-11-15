@@ -1,0 +1,6 @@
+{% load static %}{# usage: include with title, text, art (image name), action_url, action_label #}
+<div class="empty{% if small %} empty-sm{% endif %}">
+  <img src="{% url 'core:illustration' art|default:'ghost' %}" alt="" width="112" height="112">
+  <div><h3>{{ title }}</h3>{% if text %}<p style="margin:6px auto 0">{{ text }}</p>{% endif %}</div>
+  {% if action_url %}<div class="row-wrap" style="justify-content:center"><a class="btn btn-primary" href="{{ action_url }}">{{ action_label }}</a>{% if action2_url %}<a class="btn btn-secondary" href="{{ action2_url }}">{{ action2_label }}</a>{% endif %}</div>{% endif %}
+</div>

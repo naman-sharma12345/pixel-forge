@@ -1,0 +1,34 @@
+{% extends 'accounts/_auth_base.html' %}
+{% block title %}Create account{% endblock %}
+{% block description %}Join Pixel Forge to buy and sell game assets.{% endblock %}
+{% block auth_title %}{% if sell %}Start selling your assets{% else %}Create your account{% endif %}{% endblock %}
+{% block auth_sub %}{% if sell %}Create a free account first. You can open your creator studio right after.{% else %}Free forever. Buy assets, build a wishlist and upgrade to a creator any time.{% endif %}{% endblock %}
+{% block auth_body %}
+<form method="post" novalidate class="stack" style="--gap:16px">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">{% if sell %}<input type="hidden" name="intent" value="sell">{% endif %}
+  {% include 'partials/messages_inline.html' %}
+  {% include 'partials/field.html' with field=form.first_name %}
+  <div>
+    {% include 'partials/field.html' with field=form.username %}
+    <p class="help" style="margin-top:6px">Your store: <span class="font-mono">/u/<span id="username-preview">username</span></span></p>
+  </div>
+  {% include 'partials/field.html' with field=form.email %}
+  <div>
+    {% include 'partials/field.html' with field=form.password1 %}
+    <div class="strength" data-strength-for="id_password1" data-score="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  </div>
+  {% include 'partials/field.html' with field=form.password2 %}
+  <button type="submit" class="pixel-btn pixel-btn--lg pixel-btn--block" style="margin-top:8px"><span>Create account <i data-lucide="arrow-right"></i></span></button>
+  <p class="help" style="text-align:center">This is a lab demo, so no real payments are ever taken.</p>
+</form>
+<script>
+  (function () {
+    var u = document.getElementById('id_username'), p = document.getElementById('username-preview');
+    if (!u) return;
+    u.addEventListener('input', function () { u.value = u.value.toLowerCase().replace(/[^a-z0-9_]/g, ''); p.textContent = u.value || 'username'; });
+    p.textContent = u.value || 'username';
+  })();
+</script>
+{% endblock %}
+{% block auth_foot %}Already have an account? <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}" style="color:var(--text);text-decoration:underline">Log in</a>{% endblock %}

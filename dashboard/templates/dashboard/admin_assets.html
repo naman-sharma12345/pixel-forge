@@ -1,0 +1,55 @@
+{% extends 'dashboard/_base.html' %}
+{% load pf %}
+{% block title %}Asset moderation{% endblock %}
+{% block description %}Approve, reject, feature and archive assets.{% endblock %}
+{% block dash_content %}
+<header class="page-head"><div><p class="eyebrow">Admin</p><h1 class="page-title" style="margin-top:6px">Assets</h1><p class="page-sub">Moderate the catalogue. Changes apply instantly.</p></div></header>
+
+<div class="row between" style="flex-wrap:wrap;gap:12px;margin-bottom:16px">
+  <div class="pills" role="tablist" aria-label="Filter by status">{% for key, label, count in tabs %}<a class="pill{% if status == key %} is-active{% endif %}" role="tab" aria-selected="{% if status == key %}true{% else %}false{% endif %}" href="?{% if key %}status={{ key }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ label }} <span class="badge font-mono" style="font-size:10px">{{ count }}</span></a>{% endfor %}</div>
+  <form method="get" class="row" style="gap:8px">{% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}<label class="sr-only" for="aq">Search titles</label><div class="input-icon"><i data-lucide="search"></i><input class="input" id="aq" type="search" name="q" value="{{ q }}" placeholder="Search titles" style="width:240px"></div><button class="btn btn-secondary" type="submit">Search</button></form>
+</div>
+
+{% if assets %}
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Asset</th><th>Creator</th><th class="num">Price</th><th>Status</th><th>Featured</th><th style="text-align:right">Actions</th></tr></thead>
+  <tbody>{% for a in assets %}
+    <tr>
+      <td><div class="row" style="gap:12px"><img class="thumb" src="{{ a.thumbnail.url }}" alt="" width="44" height="44"><div style="min-width:0"><a class="truncate" style="display:block;max-width:260px;font-weight:500" href="{{ a.get_absolute_url }}">{{ a.title }}</a><span class="subtle" style="font-size:12px">{{ a.category.name }}</span></div></div></td>
+      <td><a class="row muted" style="gap:8px" href="{{ a.creator.get_absolute_url }}"><span class="avatar" style="width:22px;height:22px"><img src="{{ a.creator.avatar_url }}" alt="" width="22" height="22"></span>{{ a.creator.display_name }}</a></td>
+      <td class="num">{% if a.price %}{{ a.price|inr }}{% else %}<span class="price-free">FREE</span>{% endif %}</td>
+      <td><span class="status status-{{ a.status }}"{% if a.status == 'rejected' and a.rejection_reason %} title="{{ a.rejection_reason }}" tabindex="0"{% endif %}>{{ a.status }}</span></td>
+      <td>{% if a.status == 'published' %}<form method="post" action="{% url 'dashboard:admin_moderate' a.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="action" value="{% if a.is_featured %}unfeature{% else %}feature{% endif %}"><button type="submit" class="toggle" role="switch" aria-checked="{{ a.is_featured|yesno:'true,false' }}" aria-label="Feature {{ a.title }}"><span class="track"></span></button></form>{% else %}<span class="subtle">–</span>{% endif %}</td>
+      <td><div class="row" style="gap:6px;justify-content:flex-end">
+        <form method="post" action="{% url 'dashboard:admin_moderate' a.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="action" value="publish"><button class="btn btn-sm btn-secondary" style="width:34px;padding:0;color:var(--success)" type="submit" title="Approve" aria-label="Approve {{ a.title }}" {% if a.status == 'published' %}disabled{% endif %}><i data-lucide="check"></i></button></form>
+        <button class="btn btn-sm btn-secondary" style="width:34px;padding:0;color:var(--danger)" type="button" title="Reject with a reason" aria-label="Reject {{ a.title }}" data-reject="{% url 'dashboard:admin_moderate' a.pk %}" data-title="{{ a.title }}" {% if a.status == 'rejected' %}disabled{% endif %}><i data-lucide="x"></i></button>
+        <form method="post" action="{% url 'dashboard:admin_moderate' a.pk %}" data-confirm="“{{ a.title }}” disappears from the marketplace. Buyers who already own it keep access to their downloads." data-confirm-title="Archive asset?" data-confirm-label="Archive">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="action" value="archive"><button class="btn btn-sm btn-secondary" style="width:34px;padding:0" type="submit" title="Archive" aria-label="Archive {{ a.title }}" {% if a.status == 'archived' %}disabled{% endif %}><i data-lucide="archive"></i></button></form>
+      </div></td>
+    </tr>{% endfor %}</tbody>
+</table></div>
+{% include 'partials/pagination.html' %}
+{% else %}{% include 'partials/empty_state.html' with small=True art='search' title='No assets here' text='Try a different status or search.' %}{% endif %}
+
+<div class="overlay" id="reject-modal" role="dialog" aria-modal="true" aria-labelledby="rej-title" data-modal>
+  <div class="overlay__backdrop" data-close></div>
+  <form class="modal" method="post" id="reject-form">{% csrf_token %}
+    <input type="hidden" name="action" value="reject"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <h2 id="rej-title">Reject asset?</h2>
+    <p class="muted" style="margin-top:8px;font-size:14px;line-height:1.6">It’s hidden from the marketplace and the creator sees your reason in their studio, so they can fix it and resubmit.</p>
+    <div class="row-wrap" style="gap:6px;margin-top:16px">{% for p in presets %}<button type="button" class="chip" data-preset="{{ p }}">{{ p }}</button>{% endfor %}</div>
+    <div class="field" style="margin-top:16px"><label for="reject-reason">Reason (shown to the creator)</label><textarea class="textarea" id="reject-reason" name="reason" rows="3" maxlength="300" minlength="5" required></textarea><span class="counter" data-count-for="reject-reason"></span></div>
+    <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button type="submit" class="btn btn-danger">Reject asset</button></div>
+  </form>
+</div>
+<script>
+  (function () {
+    var modal = document.getElementById('reject-modal'), form = document.getElementById('reject-form'), reason = document.getElementById('reject-reason');
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-reject]');
+      if (b) { form.action = b.dataset.reject; document.getElementById('rej-title').textContent = 'Reject “' + b.dataset.title + '”?'; reason.value = ''; pf.openModal(modal, b); return; }
+      var p = e.target.closest('[data-preset]');
+      if (p) { reason.value = p.dataset.preset; reason.dispatchEvent(new Event('input')); }
+    });
+  })();
+</script>
+{% endblock %}

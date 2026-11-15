@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load pf %}
+{% block title %}@{{ owner.username }}{% endblock %}
+{% block description %}{{ owner.bio|default:owner.display_name }}{% endblock %}
+{% block content %}
+<div class="profile-banner"><img src="{% url 'core:banner' owner.username %}" alt="" width="768" height="192"></div>
+<div class="container" style="position:relative;z-index:1">
+  <div style="margin-top:-72px;display:flex;flex-direction:column;gap:20px">
+    <div class="row-wrap" style="--gap:20px;align-items:flex-end;justify-content:space-between">
+      <div class="row-wrap" style="--gap:16px;align-items:flex-end">
+        <div class="profile-avatar"><span class="avatar" style="width:112px;height:112px"><img src="{{ owner.avatar_url }}" alt="{{ owner.display_name }} avatar" width="112" height="112"></span></div>
+        <div style="padding-bottom:4px">
+          <div class="row-wrap" style="--gap:10px"><h1 class="page-title" style="font-size:2rem">{{ owner.display_name }}</h1>
+            {% if owner.role != 'buyer' %}<span class="font-pixel" style="display:inline-flex;gap:4px;align-items:center;padding:5px 8px;border-radius:6px;background:var(--primary);color:#fff;font-size:8px;box-shadow:3px 3px 0 rgba(0,0,0,.55)"><i data-lucide="badge-check" style="width:12px;height:12px"></i> Creator</span>{% endif %}</div>
+          <p class="muted" style="font-size:14px;margin-top:4px"><span class="font-mono">@{{ owner.username }}</span> · Joined {{ owner.date_joined|date:"j M Y" }}</p>
+        </div>
+      </div>
+      <div class="row" style="padding-bottom:4px">
+        {% if owner.website %}<a class="icon-btn card" href="{{ owner.website }}" target="_blank" rel="noopener noreferrer" aria-label="Website"><i data-lucide="globe"></i></a>{% endif %}
+        {% if owner.twitter %}<a class="icon-btn card" href="https://x.com/{{ owner.twitter|cut:'@' }}" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i data-lucide="twitter"></i></a>{% endif %}
+        {% if owner.itchio %}<a class="icon-btn card" href="https://{{ owner.itchio|cut:'https://' }}" target="_blank" rel="noopener noreferrer" aria-label="itch.io"><i data-lucide="gamepad-2"></i></a>{% endif %}
+        {% if owner.github %}<a class="icon-btn card" href="https://github.com/{{ owner.github }}" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><i data-lucide="github"></i></a>{% endif %}
+        {% if owner == user %}<a class="btn btn-secondary" href="{% url 'accounts:settings' %}"><i data-lucide="pencil"></i> Edit profile</a>{% endif %}
+      </div>
+    </div>
+    {% if owner.bio %}<p style="max-width:640px;line-height:1.7;color:rgba(237,237,245,.8)">{{ owner.bio }}</p>{% endif %}
+    <dl class="stats" style="margin:0">
+      <div class="stat"><dt class="stat__label"><i data-lucide="package" class="text-primary"></i> Assets</dt><dd class="stat__value" style="margin:0">{{ stats.asset_count }}</dd></div>
+      <div class="stat"><dt class="stat__label"><i data-lucide="shopping-bag" class="text-success"></i> Sales</dt><dd class="stat__value" style="margin:0">{{ stats.sales }}</dd></div>
+      <div class="stat"><dt class="stat__label"><i data-lucide="download" class="text-accent"></i> Downloads</dt><dd class="stat__value" style="margin:0">{{ stats.downloads|default:0 }}</dd></div>
+      <div class="stat"><dt class="stat__label"><i data-lucide="star" class="text-warning"></i> Avg rating</dt><dd class="stat__value" style="margin:0">{% if stats.avg_rating %}{{ stats.avg_rating|floatformat:1 }}{% else %}–{% endif %}</dd></div>
+    </dl>
+  </div>
+
+  <div class="section-sm">
+    <div class="row between" style="flex-wrap:wrap;gap:12px">
+      <div class="tabs" role="tablist" style="border:0">
+        <a class="tab {% if tab == 'assets' %}is-active{% endif %}" href="?tab=assets&sort={{ sort }}" role="tab" aria-selected="{% if tab == 'assets' %}true{% else %}false{% endif %}">Assets</a>
+        <a class="tab {% if tab == 'about' %}is-active{% endif %}" href="?tab=about" role="tab" aria-selected="{% if tab == 'about' %}true{% else %}false{% endif %}">About</a>
+      </div>
+      {% if tab == 'assets' %}
+      <form method="get"><input type="hidden" name="tab" value="assets"><label class="sr-only" for="sort">Sort assets</label>
+        <select class="select" id="sort" name="sort" style="height:36px;width:170px" data-autosubmit>
+          {% for v, l in sort_options %}<option value="{{ v }}" {% if sort == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select><noscript><button class="btn btn-secondary btn-sm" type="submit">Sort</button></noscript></form>
+      {% endif %}
+    </div>
+    <div style="margin-top:20px">
+    {% if tab == 'about' %}
+      <div class="card" style="padding:24px;max-width:640px"><h2 style="font-size:1rem;margin-bottom:12px">About</h2><p class="prose">{{ owner.bio|default:"This creator has not written a bio yet." }}</p></div>
+    {% elif assets %}
+      <div class="asset-grid wide">{% for asset in assets %}{% include 'partials/asset_card.html' %}{% endfor %}</div>
+    {% else %}
+      {% include 'partials/empty_state.html' with art='slime' title='No assets yet' text='Nothing published here yet. Check back soon.' action_url='/explore/' action_label='Browse the marketplace' %}
+    {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

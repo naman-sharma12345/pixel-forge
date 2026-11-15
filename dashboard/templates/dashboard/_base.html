@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{# Shared shell for the Creator Studio and the Admin panel: sidebar (top tab bar on mobile) + page content. #}
+{% block content %}
+{% with route=request.resolver_match.url_name %}
+<div class="container" style="max-width:1440px;padding-top:24px">
+  <div class="dash">
+    <aside class="dash__side">
+      <div class="dash__who">
+        <span class="avatar" style="width:32px;height:32px"><img src="{{ user.avatar_url }}" alt="" width="32" height="32"></span>
+        <div style="min-width:0"><p class="truncate" style="font-size:14px;font-weight:600">{% if dash == 'admin' %}Admin panel{% else %}Creator Studio{% endif %}</p><p class="font-pixel text-primary" style="font-size:7px;line-height:1.8">{{ dash }}</p></div>
+      </div>
+      <nav aria-label="{% if dash == 'admin' %}Admin{% else %}Studio{% endif %} navigation">
+        {% if dash == 'admin' %}
+          <a class="dash__link{% if route == 'admin' %} is-active{% endif %}" href="{% url 'dashboard:admin' %}"><i data-lucide="bar-chart-3"></i> Overview</a>
+          <a class="dash__link{% if route == 'admin_users' %} is-active{% endif %}" href="{% url 'dashboard:admin_users' %}"><i data-lucide="users"></i> Users</a>
+          <a class="dash__link{% if route == 'admin_assets' %} is-active{% endif %}" href="{% url 'dashboard:admin_assets' %}"><i data-lucide="boxes"></i> Assets</a>
+          <a class="dash__link" href="{% url 'admin:index' %}"><i data-lucide="database"></i> Django Admin</a>
+        {% else %}
+          <a class="dash__link{% if route == 'studio' %} is-active{% endif %}" href="{% url 'dashboard:studio' %}"><i data-lucide="layout-dashboard"></i> Overview</a>
+          <a class="dash__link{% if route == 'studio_assets' %} is-active{% endif %}" href="{% url 'catalog:studio_assets' %}"><i data-lucide="boxes"></i> My assets</a>
+          <a class="dash__link hl{% if route == 'studio_new' or route == 'studio_edit' %} is-active{% endif %}" href="{% url 'catalog:studio_new' %}"><i data-lucide="upload"></i> Upload new</a>
+          <a class="dash__link{% if route == 'studio_sales' %} is-active{% endif %}" href="{% url 'dashboard:studio_sales' %}"><i data-lucide="receipt"></i> Sales</a>
+          <a class="dash__link" href="{% url 'accounts:profile' user.username %}"><i data-lucide="user-round"></i> View my profile</a>
+        {% endif %}
+      </nav>
+    </aside>
+    <div style="min-width:0">{% block dash_content %}{% endblock %}</div>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}

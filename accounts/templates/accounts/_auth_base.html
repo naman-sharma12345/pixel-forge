@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="auth">
+  <div class="auth__form">
+    <div class="glow-blob" style="left:50%;top:80px;width:260px;height:260px;margin-left:-130px;background:rgba(139,92,246,.15)"></div>
+    <div class="auth__box">
+      <h1 class="page-title" style="font-size:2rem">{% block auth_title %}{% endblock %}</h1>
+      <p class="muted" style="margin-top:8px;line-height:1.6">{% block auth_sub %}{% endblock %}</p>
+      <div style="margin-top:32px">{% block auth_body %}{% endblock %}</div>
+      <p class="muted" style="margin-top:24px;text-align:center;font-size:14px">{% block auth_foot %}{% endblock %}</p>
+      <ul class="row" style="--gap:8px;margin-top:40px;padding-top:24px;border-top:1px solid var(--border);justify-content:space-between;font-size:11px;color:var(--subtle);text-align:center">
+        <li style="flex:1"><i data-lucide="download" style="width:16px;height:16px"></i><br>Instant downloads</li>
+        <li style="flex:1"><i data-lucide="headphones" style="width:16px;height:16px"></i><br>Preview everything</li>
+        <li style="flex:1"><i data-lucide="shield-check" style="width:16px;height:16px"></i><br>Clear licenses</li>
+      </ul>
+    </div>
+  </div>
+  <div class="auth__art noise" aria-hidden="true">
+    <div class="auth__land" style="background-image:url('{% url 'core:banner' 'auth-night-4' %}?w=320&h=200')"></div>
+    <div class="auth__hero" style="background-image:url('{% url 'core:sheet' 'auth-hero' %}')"></div>
+    <div class="auth__quote">
+      <blockquote style="margin:0">
+        <p class="font-display" style="font-family:var(--font-display);font-size:1.25rem;font-weight:500;line-height:1.35" id="quote-text">“Ship the game. Polish the pixels later.”</p>
+        <p class="font-mono text-accent" style="margin-top:12px;font-size:12px" id="quote-by">— every jam winner, ever</p>
+      </blockquote>
+    </div>
+  </div>
+</div>
+<script>
+  (function () {
+    var q = [['Ship the game. Polish the pixels later.', 'every jam winner, ever'], ['Good assets are bought, not born at 3 AM.', 'the Pixel Forge manifesto'],
+      ['Your hero deserves better than a stretched square.', 'a very tired dev'], ['A great sound effect is half the game feel.', 'someone who added screen shake']];
+    var i = 0, t = document.getElementById('quote-text'), b = document.getElementById('quote-by');
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    setInterval(function () { i = (i + 1) % q.length; t.textContent = '“' + q[i][0] + '”'; b.textContent = '— ' + q[i][1]; }, 6500);
+  })();
+</script>
+{% endblock %}
