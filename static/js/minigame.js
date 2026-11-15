@@ -16,8 +16,7 @@
     scoreEl.textContent = '0';
   }
   function jump() {
-    if (over) { reset(); loop(); return; }
-    if (!running) { reset(); loop(); return; }
+    if (over || !running) { reset(); hint.textContent = ''; loop(); return; }
     if (player.grounded) { player.vy = -7.6; player.grounded = false; }
     hint.textContent = '';
   }

@@ -68,11 +68,20 @@ flowchart LR
 
 | | |
 | --- | --- |
-| ![Home](docs/screenshots/home.png) | ![Explore](docs/screenshots/explore.png) |
-| ![Asset detail](docs/screenshots/detail.png) | ![Checkout](docs/screenshots/checkout.png) |
-| ![Creator studio](docs/screenshots/studio.png) | ![Admin panel](docs/screenshots/admin.png) |
+| ![Home](docs/screenshots/01-home.png) | ![Explore](docs/screenshots/02-explore.png) |
+| ![Asset detail](docs/screenshots/03-asset-detail.png) | ![Checkout](docs/screenshots/09-payment.png) |
+| ![Creator studio](docs/screenshots/13-studio-overview.png) | ![Admin panel](docs/screenshots/17-admin-overview.png) |
 
-*Screenshot files are placeholders. Run the app, capture these six pages and save them in `docs/screenshots/`.*
+More screenshots are in [`docs/screenshots/`](docs/screenshots/).
+
+## Study guides
+
+Each team member has a guide explaining their part with code walk-throughs, screenshots and viva questions:
+
+1. [Abhishek: foundation, login and users](docs/study-guides/1-Abhishek-Foundation-and-Accounts.md)
+2. [Parth: catalogue, search, reviews and studio](docs/study-guides/2-Parth-Catalogue-Search-Reviews-and-Studio.md)
+3. [Adwait: commerce, dashboards and reports](docs/study-guides/3-Adwait-Commerce-Dashboards-and-Reports.md)
+4. [Naman: front end, design and JavaScript](docs/study-guides/4-Naman-Frontend-Design-and-JavaScript.md)
 
 ## Run it locally
 
